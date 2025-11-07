@@ -1,0 +1,3 @@
+[submodule "dreamerv2"]
+	path = dreamerv2
+	url = git@github.com:EmanuelSamir/dreamerv2.git
