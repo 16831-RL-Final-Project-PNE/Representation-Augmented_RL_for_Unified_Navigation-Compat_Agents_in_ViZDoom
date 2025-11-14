@@ -36,9 +36,9 @@ class ActorCritic(nn.Module):
         self.v  = nn.Sequential(nn.ReLU(), nn.Linear(feat_dim, 1))
 
     def forward(self, x):
-        h = self.enc(x)
-        logits = self.pi(h)
-        value  = self.v(h).squeeze(-1)
+        h = self.enc(x) #(B, feat_dim)
+        logits = self.pi(h) #(B, n_actions)
+        value  = self.v(h).squeeze(-1) #(B,)
         return logits, value
 
     @torch.no_grad()

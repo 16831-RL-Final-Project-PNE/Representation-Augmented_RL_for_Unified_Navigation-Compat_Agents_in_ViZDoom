@@ -4,17 +4,17 @@ from dataclasses import dataclass
 
 @dataclass
 class PPOConfig:
-    total_iterations: int = 100
-    steps_per_iteration: int = 4096
+    total_iterations: int = 200
+    steps_per_iteration: int = 8192
     batch_size: int = 64
-    learning_rate: float = 3e-4
+    learning_rate: float = 1e-4
 
     gamma: float = 0.99
     gae_lambda: float = 0.95
 
     ppo_epochs: int = 4
-    clip_coef: float = 0.2
-    value_coef: float = 0.5
+    clip_coef: float = 0.1
+    value_coef: float = 0.25
     entropy_coef: float = 0.01
     max_grad_norm: float = 0.5
 
@@ -29,3 +29,6 @@ class PPOConfig:
     checkpoint_dir: str = "./checkpoints"
     checkpoint_name: str = "ppo_basic"   # prefix
     save_every: int = 0                  # 0 = only final, >0 = also every N iterations
+
+    # whether to use deterministic policy during evaluation
+    eval_deterministic: bool = True

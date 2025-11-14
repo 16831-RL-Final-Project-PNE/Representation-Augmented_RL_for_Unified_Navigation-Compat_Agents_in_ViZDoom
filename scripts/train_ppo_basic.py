@@ -35,14 +35,17 @@ def main():
     )
 
     config = PPOConfig(
-        total_iterations=50,
-        steps_per_iteration=4096,
-        batch_size=64,
-        learning_rate=3e-4,
+        total_iterations=200,
+        steps_per_iteration=8192,
+        batch_size=128,
+        learning_rate=1e-4,
+        clip_coef=0.1,
+        value_coef=0.25,
         eval_episodes=10,
         eval_interval=1,
         eval_log_path="./logs/basic_ppo_eval.npz",
         log_dir="./logs/tb_ppo_basic",
+        eval_deterministic=False,   # or False, up to you
     )
 
     trainer = RLTrainer(

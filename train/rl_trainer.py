@@ -174,11 +174,22 @@ class RLTrainer:
 
     def update_policy(self) -> Dict[str, float]:
         """
-        Run multiple PPO epochs over the collected rollout.
-        Return a dictionary of average losses for logging.
-        """
+        Perform one policy/value update step.
 
-        # Random agent: no training, just return zeros for logging
+        This method is intentionally algorithm-agnostic:
+        - For non-trainable agents (e.g., RandomAgent), this is a no-op that
+          returns zero losses for logging.
+        - For trainable agents (e.g., PPOAgent, future DrQv2Agent, etc.),
+          the actual update logic is delegated to the agent via its `update`
+          method.
+
+        The agent is responsible for:
+        - reading batches from the provided rollout buffer,
+        - computing its own losses,
+        - calling `optimizer.step()`,
+        - and returning a dict of scalar logs.
+        """
+        # Non-learning agents: no update
         if self.agent_type == "random":
             return {
                 "Loss_Policy": 0.0,
@@ -186,66 +197,31 @@ class RLTrainer:
                 "Loss_Entropy": 0.0,
             }
 
-        policy_losses = []
-        value_losses = []
-        entropy_losses = []
+        # Trainable agents are expected to implement `update(...)`
+        if not hasattr(self.agent, "update"):
+            raise AttributeError(
+                f"Agent of type '{self.agent_type}' does not implement an "
+                f"`update(buffer, optimizer, config)` method."
+            )
 
-        # Show PPO epoch progress with tqdm
-        for _ in trange(
-            self.config.ppo_epochs,
-            desc="PPO update",
-            leave=False,
-        ):
-            for batch in self.buffer.get_minibatches(self.config.batch_size):
-                obs_batch = batch["observations"]  # (B, C, H, W)
-                actions = batch["actions"]
-                old_log_probs = batch["log_probs"]
-                advantages = batch["advantages"]
-                returns = batch["returns"]
+        # Delegate the actual RL algorithm to the agent
+        logs = self.agent.update(
+            buffer=self.buffer,
+            optimizer=self.optimizer,
+            config=self.config,
+        )
 
-                # Normalize advantages
-                advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
-
-                new_log_probs, entropy, values = self.agent.evaluate_actions(
-                    obs_batch, actions
-                )
-
-                ratio = (new_log_probs - old_log_probs).exp()
-                surr1 = ratio * advantages
-                surr2 = torch.clamp(
-                    ratio,
-                    1.0 - self.config.clip_coef,
-                    1.0 + self.config.clip_coef,
-                ) * advantages
-                policy_loss = -torch.min(surr1, surr2).mean()
-
-                value_loss = F.mse_loss(values, returns)
-                entropy_loss = entropy.mean()
-
-                loss = (
-                    policy_loss
-                    + self.config.value_coef * value_loss
-                    - self.config.entropy_coef * entropy_loss
-                )
-
-                self.optimizer.zero_grad()
-                loss.backward()
-                torch.nn.utils.clip_grad_norm_(
-                    self.agent.parameters(),
-                    self.config.max_grad_norm,
-                )
-                self.optimizer.step()
-
-                policy_losses.append(policy_loss.item())
-                value_losses.append(value_loss.item())
-                entropy_losses.append(entropy_loss.item())
-
-        logs = {
-            "Loss_Policy": float(np.mean(policy_losses)) if policy_losses else 0.0,
-            "Loss_Value": float(np.mean(value_losses)) if value_losses else 0.0,
-            "Loss_Entropy": float(np.mean(entropy_losses)) if entropy_losses else 0.0,
+        # Ensure we always return a dict with the standard keys
+        default_logs = {
+            "Loss_Policy": 0.0,
+            "Loss_Value": 0.0,
+            "Loss_Entropy": 0.0,
         }
-        return logs
+        if logs is None:
+            return default_logs
+
+        default_logs.update(logs)
+        return default_logs
 
     def _log_iteration(
         self,
@@ -350,7 +326,7 @@ class RLTrainer:
                 agent=self.agent,
                 num_episodes=self.config.eval_episodes,
                 device=self.device,
-                deterministic=True,
+                deterministic=self.config.eval_deterministic,
                 return_raw=True,
             )
 
