@@ -5,7 +5,8 @@ python -m scripts.train_random_basic
 # 2 use unified evaluator to plot average eval return vs interations
 python -m eval.evaluation \
   --log_path ./logs/random_basic_eval.npz \
-  --out ./plots/random_basic_eval.png
+  --out ./plots/random_basic_eval.png \
+  --annotate_last_only
 
 # 3 output the playing game GIF using random agent
 python -m scripts.eval_random_play \
@@ -29,7 +30,8 @@ python -m scripts.train_ppo_basic
 # 2 use unified evaluator to plot average eval return vs interations
 python -m eval.evaluation \
   --log_path ./logs/basic_ppo_eval.npz \
-  --out ./plots/basic_ppo_eval.png
+  --out ./plots/basic_ppo_eval.png \
+  --annotate_last_only
 
 # 3 output the playing game GIF using ppo agent
 python -m scripts.eval_ppo_basic_play \

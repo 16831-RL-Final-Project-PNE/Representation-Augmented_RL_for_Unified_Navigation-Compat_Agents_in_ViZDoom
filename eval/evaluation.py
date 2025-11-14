@@ -93,7 +93,7 @@ class EvalLogger:
         return logger
 
 
-def plot_eval_curve(npz_path: str, out_path: str) -> None:
+def plot_eval_curve(npz_path: str, out_path: str, annotate: bool = False, annotate_last_only: bool = False) -> None:
     """
     Plot average eval return vs iteration, homework-style.
     """
@@ -112,8 +112,11 @@ def plot_eval_curve(npz_path: str, out_path: str) -> None:
     plt.title("Average Evaluation Return vs Iteration")
 
     # Label values near each point
-    for x, y in zip(iters, mean):
-        plt.text(x, y, f"{y:.1f}", fontsize=8, ha="center", va="bottom")
+    if annotate_last_only:
+        plt.text(iters[-1], mean[-1], f"{mean[-1]:.1f}", fontsize=8, ha="center", va="bottom")
+    elif annotate:
+        for x, y in zip(iters, mean):
+            plt.text(x, y, f"{y:.1f}", fontsize=8, ha="center", va="bottom")    
 
     plt.grid(True)
     plt.tight_layout()
@@ -125,5 +128,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--log_path", type=str, required=True, help="Path to .npz eval log")
     parser.add_argument("--out", type=str, default="./plots/eval_return.png")
+    parser.add_argument(
+        "--annotate",
+        action="store_true",
+        help="Annotate each point with its mean return value.",
+    )
+    parser.add_argument(
+        "--annotate_last_only",
+        action="store_true",
+        help="Annotate only the last point with its mean return value.",
+    )
     args = parser.parse_args()
-    plot_eval_curve(args.log_path, args.out)
+    plot_eval_curve(args.log_path, args.out, args.annotate, args.annotate_last_only)
