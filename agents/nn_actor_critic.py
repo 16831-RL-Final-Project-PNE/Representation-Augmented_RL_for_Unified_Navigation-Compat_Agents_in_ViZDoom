@@ -10,9 +10,9 @@ class ConvEncoder(nn.Module):
     def __init__(self, in_channels: int = 12, feat_dim: int = 256):
         super().__init__()
         self.conv = nn.Sequential(
-            nn.Conv2d(in_channels, 32, kernel_size=8, stride=4), nn.ReLU(inplace=True),
-            nn.Conv2d(32, 64, kernel_size=4, stride=2),          nn.ReLU(inplace=True),
-            nn.Conv2d(64, 64, kernel_size=3, stride=1),          nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels, 32, kernel_size=8, stride=4), nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=4, stride=2),          nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=3, stride=1),          nn.ReLU(),
         )
         # Lazy mapping: infer conv output size at runtime
         self.head = nn.LazyLinear(feat_dim)
@@ -26,12 +26,14 @@ class ConvEncoder(nn.Module):
         z = self.head(z)
         return z
 
+
 class ActorCritic(nn.Module):
     def __init__(self, in_channels: int = 12, n_actions: int = 12, feat_dim: int = 256):
         super().__init__()
         self.enc = ConvEncoder(in_channels, feat_dim)
-        self.pi = nn.Sequential(nn.ReLU(inplace=True), nn.Linear(feat_dim, n_actions))
-        self.v  = nn.Sequential(nn.ReLU(inplace=True), nn.Linear(feat_dim, 1))
+        # IMPORTANT: do NOT use inplace=True here, since the same feature h is shared
+        self.pi = nn.Sequential(nn.ReLU(), nn.Linear(feat_dim, n_actions))
+        self.v  = nn.Sequential(nn.ReLU(), nn.Linear(feat_dim, 1))
 
     def forward(self, x):
         h = self.enc(x)
