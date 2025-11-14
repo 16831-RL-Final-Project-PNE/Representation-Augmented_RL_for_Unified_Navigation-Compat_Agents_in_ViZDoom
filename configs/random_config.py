@@ -32,10 +32,7 @@ class RandomAgentConfig:
     gamma: float = 0.99
     gae_lambda: float = 0.95
 
-    # PPO-specific fields (not used when agent_type == "random", but required
-    # so that RLTrainer can access these attributes safely)
-    ppo_epochs: int = 1
-    clip_coef: float = 0.0
-    value_coef: float = 0.0
-    entropy_coef: float = 0.0
-    max_grad_norm: float = 0.0
+    # Whether to use deterministic actions during evaluation.
+    # For a random agent, this flag doesn’t really change behavior,
+    # but we define it so RLTrainer can use a unified interface.
+    eval_deterministic: bool = True

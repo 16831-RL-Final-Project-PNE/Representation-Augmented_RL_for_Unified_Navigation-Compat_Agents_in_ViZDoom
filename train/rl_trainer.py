@@ -317,7 +317,7 @@ class RLTrainer:
             train_returns = rollout_info["train_returns"]
             train_ep_lens = rollout_info["train_ep_lens"]
 
-            # 2) PPO update
+            # 2) Agent update
             train_logs = self.update_policy()
 
             # 3) evaluation for logging
