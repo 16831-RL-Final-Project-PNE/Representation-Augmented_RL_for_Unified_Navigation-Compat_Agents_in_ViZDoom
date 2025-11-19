@@ -53,7 +53,7 @@ def _to_rgb(buf):
 # ---- unified 12-action space built from {FORWARD, LEFT, RIGHT, SHOOT} (no contradictory combos) ----
 BUTTONS = [vzd.Button.MOVE_FORWARD, vzd.Button.TURN_LEFT,
            vzd.Button.TURN_RIGHT, vzd.Button.ATTACK]
-ACTIONS: List[List[int]] = [
+ACTIONS_BASIC: List[List[int]] = [
     [0,0,0,0],  # 0 noop
     [1,0,0,0],  # 1 forward
     [0,1,0,0],  # 2 left
@@ -68,6 +68,16 @@ ACTIONS: List[List[int]] = [
     [1,0,1,1],  # 11 forward+right+shoot
 ]
 
+# my_way_home deos not need 'shoot', 6 useful actions
+ACTIONS_NO_SHOOT: List[List[int]] = [
+    [0,0,0,0],  # noop
+    [1,0,0,0],  # forward
+    [0,1,0,0],  # left
+    [0,0,1,0],  # right
+    [1,1,0,0],  # forward+left
+    [1,0,1,0],  # forward+right
+]
+
 class DoomEnv:
     """
     Minimal Gym-like wrapper (without Gym dependency):
@@ -78,6 +88,7 @@ class DoomEnv:
     """
     def __init__(self,
                  scenario: str = "basic",    # "basic" or "my_way_home"
+                 action_space: str = "no_shoot", #"no-shoot" or "usual"
                  frame_repeat: int = 4,      # repeat the chosen action for N game tics
                  frame_stack: int = 4,       # concatenate last N frames
                  width: int = 84,
@@ -94,6 +105,11 @@ class DoomEnv:
         self._stack: deque = deque(maxlen=self.frame_stack)
         self._last_rgb: Optional[np.ndarray] = None
         self._last_rgb_native: Optional[np.ndarray] = None
+
+        if action_space == "no_shoot":
+            self._action = ACTIONS_NO_SHOOT
+        else:
+            self._action = ACTIONS_BASIC
 
         # --- build and init the ViZDoom game ---
         self.game = vzd.DoomGame()
@@ -184,7 +200,7 @@ class DoomEnv:
 
     @property
     def action_space_n(self) -> int:
-        return len(ACTIONS)
+        return len(self._action)
 
     def reset(self) -> np.ndarray:
         self.game.new_episode()
@@ -203,7 +219,7 @@ class DoomEnv:
         action = int(action)
 
         # ---- move forward through every tic frame ----
-        self.game.set_action(ACTIONS[action])
+        self.game.set_action(self._action[action])
         step_reward = 0.0
         tic_frames = []
         last_hwc = None
