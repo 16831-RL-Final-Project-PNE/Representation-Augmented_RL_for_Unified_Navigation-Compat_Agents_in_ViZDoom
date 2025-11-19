@@ -7,8 +7,28 @@ import imageio.v2 as imageio
 import numpy as np
 import torch
 
-from env.doom_env import DoomEnv
+from env.doom_env import DoomEnv, _save_gif
 from agents.ppo_agent import PPOAgent
+
+def _to_hwc_rgb(frame: np.ndarray) -> np.ndarray:
+    """
+    Convert a ViZDoom buffer (CHW or HWC, gray/RGB/RGBA) to HWC uint8 RGB.
+    """
+    arr = np.asarray(frame, dtype=np.uint8)
+
+    # CHW -> HWC if needed (ViZDoom typically uses (C, H, W))
+    if arr.ndim == 3 and arr.shape[0] in (1, 3, 4) and arr.shape[-1] not in (1, 3, 4):
+        arr = np.transpose(arr, (1, 2, 0))
+    elif arr.ndim == 2:  # H x W -> H x W x 1
+        arr = arr[..., None]
+
+    # Drop alpha or expand gray to RGB
+    if arr.shape[-1] == 4:
+        arr = arr[..., :3]
+    elif arr.shape[-1] == 1:
+        arr = np.repeat(arr, 3, axis=-1)
+
+    return arr.copy()
 
 
 def _maybe_upscale(frame_hwc: np.ndarray, scale: int | None) -> np.ndarray:
@@ -33,7 +53,7 @@ def _obs_to_tensor(obs: np.ndarray, device: torch.device) -> torch.Tensor:
     if obs_t.ndim != 4:
         raise ValueError(f"Expected obs with 4 dims (T,3,H,W), got {obs_t.shape}")
     t, c, h, w = obs_t.shape
-    obs_t = obs_t.view(1, t * c, h, w).float() / 255.0
+    obs_t = obs_t.reshape(1, t * c, h, w).float() / 255.0
     return obs_t.to(device)
 
 
@@ -62,10 +82,11 @@ def play_and_record(
         ep_tics = 0
         last_info: dict = {}
 
-        # initial frame
-        f0 = env.render("rgb_array")
-        if f0 is not None:
-            fr = _maybe_upscale(f0, gif_scale)
+        # --- Initial frame directly from ViZDoom state ---
+        state = env.game.get_state()
+        if state is not None and state.screen_buffer is not None:
+            frame = _to_hwc_rgb(state.screen_buffer)
+            fr = _maybe_upscale(frame, gif_scale)
             ep_frames.append(fr)
 
         done = False
@@ -79,16 +100,18 @@ def play_and_record(
             ep_tics += env.frame_repeat
             last_info = info
 
-            frames = info.get("tic_frames")
-            if frames:
-                for frm in frames:
-                    fr = _maybe_upscale(frm, gif_scale)
+            tic_frames = info.get("tic_frames") or []
+            if tic_frames:
+                for frm in tic_frames:
+                    frame = _to_hwc_rgb(frm)
+                    fr = _maybe_upscale(frame, gif_scale)
                     for _ in range(max(1, step_frame_repeat_for_gif)):
                         ep_frames.append(fr)
             else:
-                f = env.render("rgb_array")
-                if f is not None:
-                    fr = _maybe_upscale(f, gif_scale)
+                last_scr = info.get("last_screen", None)
+                if last_scr is not None:
+                    frame = _to_hwc_rgb(last_scr)
+                    fr = _maybe_upscale(frame, gif_scale)
                     for _ in range(max(1, step_frame_repeat_for_gif)):
                         ep_frames.append(fr)
 
@@ -110,7 +133,7 @@ def play_and_record(
                 gif_dir,
                 f"ep_{i+1:03d}_return_{ep_ret:.2f}.gif",
             )
-            imageio.mimsave(out_file, ep_frames, duration=1.0 / max(1, fps), loop=0)
+            _save_gif(out_file, ep_frames, fps)
 
         if ep_ret > best_return and ep_frames:
             best_return, best_frames = ep_ret, ep_frames
@@ -129,7 +152,7 @@ def play_and_record(
             out_dir,
             f"{root}_return_{best_return:.2f}{ext}",
         )
-        imageio.mimsave(out_file, best_frames, duration=1.0 / max(1, fps), loop=0)
+        _save_gif(out_file, best_frames, fps)
         print(f"Saved best-episode GIF to: {out_file}")
 
 
