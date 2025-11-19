@@ -18,6 +18,13 @@ def main():
         choices=["basic", "my_way_home"],
         help="ViZDoom scenario to run.",
     )
+    parser.add_argument(
+        "--action_space",
+        type=str,
+        default="usual",
+        choices=["usual", "no_shoot"],
+        help="ViZDoom action space to run.",
+    )
     parser.add_argument("--total_iterations", type=int, default=20,
                         help="Number of high-level RL iterations (collect + eval).")
     parser.add_argument("--steps_per_iteration", type=int, default=4096,
@@ -105,6 +112,7 @@ def main():
     # ------------------------------------------------------------------
     train_env = DoomEnv(
         scenario=args.scenario,
+        action_space=args.action_space,
         frame_repeat=args.frame_repeat,
         frame_stack=args.frame_stack,
         width=args.width,
