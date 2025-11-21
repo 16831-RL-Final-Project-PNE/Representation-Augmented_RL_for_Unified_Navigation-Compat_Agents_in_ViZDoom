@@ -92,7 +92,7 @@ python -m scripts.train_ppo_basic \
   --eval_log_dir ./logs \
   --eval_log_name mwh_ppo_eval_v2.npz \
   --tb_log_dir ./logs/tb_ppo_mwh_v2 \
-  --checkpoint_dir ./checkpoints \
+  --checkpoint_dir ./checkpoints_mwh \
   --checkpoint_name ppo_mwh_v2 \
   --save_every 0
 
@@ -104,7 +104,12 @@ python -m eval.evaluation \
 
 python -m eval.evaluation \
   --log_path ./logs/mwh_ppo_eval.npz \
-  --out ./plots/mwh_ppo_eval.png \
+  --out ./plots_mwh/mwh_ppo_eval.png \
+  --annotate_last_only
+
+python -m eval.evaluation \
+  --log_path ./logs/mwh_ppo_eval_v2.npz \
+  --out ./plots_mwh/mwh_ppo_eval_v2.png \
   --annotate_last_only
 
 # 3 output the playing game GIF using ppo agent
@@ -141,7 +146,7 @@ python -m scripts.eval_ppo_basic_play \
   --deterministic
 
 python -m scripts.eval_ppo_basic_play \
-  --checkpoint ./checkpoints/ppo_mwh_final.pt \
+  --checkpoint ./checkpoints_mwh/ppo_mwh_final.pt \
   --scenario my_way_home \
   --action_space no_shoot \
   --episodes 5 \
@@ -151,6 +156,22 @@ python -m scripts.eval_ppo_basic_play \
   --base_res 800x600 \
   --gif ./out/ppo_mwh_v1/best.gif \
   --gif_dir ./out/ppo_mwh_v1/eps \
+  --fps 15 \
+  --gif_scale 1 \
+  --gif_repeat 1 \
+  --deterministic
+
+python -m scripts.eval_ppo_basic_play \
+  --checkpoint ./checkpoints_mwh/ppo_mwh_v2_final.pt \
+  --scenario my_way_home \
+  --action_space no_shoot \
+  --episodes 5 \
+  --frame_repeat 4 \
+  --frame_stack 4 \
+  --width 84 --height 84 \
+  --base_res 800x600 \
+  --gif ./out/ppo_mwh_v2/best.gif \
+  --gif_dir ./out/ppo_mwh_v2/eps \
   --fps 15 \
   --gif_scale 1 \
   --gif_repeat 1 \
