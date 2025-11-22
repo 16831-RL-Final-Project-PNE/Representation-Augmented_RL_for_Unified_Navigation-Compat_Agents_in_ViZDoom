@@ -81,7 +81,11 @@ class RLTrainer:
             return PPOAgent(
                 obs_shape=self.obs_shape,
                 n_actions=self.n_actions,
+                feat_dim=self.config.feat_dim,
+                backbone=self.config.backbone,        # "cnn" / "dinov2" / "dinov3"
+                freeze_backbone=self.config.freeze_backbone,
             )
+
         elif agent_type == "random":
             # Stateless random policy
             return RandomAgent(n_actions=self.n_actions)
@@ -308,6 +312,7 @@ class RLTrainer:
         - collect rollouts
         - update policy
         - evaluate periodically and log mean returns vs iteration
+        - optionally save checkpoints every N iterations
         """
         for iteration in range(self.config.total_iterations):
             print(f"\n\n********** Iteration {iteration} ************")
@@ -339,6 +344,14 @@ class RLTrainer:
                 eval_ep_lens=eval_ep_lens,
                 train_logs=train_logs,
             )
+
+            # 5) optional periodic checkpoint saving
+            if (
+                getattr(self.config, "save_every", 0) > 0
+                and (iteration + 1) % self.config.save_every == 0
+            ):
+                # use iteration index (1-based) in filename
+                self.save_model(tag=f"iter_{iteration + 1}")
 
         # Save final model
         self.save_model(tag="final")
