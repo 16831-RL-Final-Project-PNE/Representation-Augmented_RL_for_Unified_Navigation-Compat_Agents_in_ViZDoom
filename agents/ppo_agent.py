@@ -9,6 +9,8 @@ import torch.nn.functional as F
 from torch.distributions import Categorical
 
 from .nn_actor_critic import ActorCritic
+from .nn_actor_critic_dinov3 import DinoV3ActorCritic
+from .nn_actor_critic_dinov2 import DinoV2ActorCritic
 
 
 
@@ -23,21 +25,65 @@ class PPOAgent(nn.Module):
     - update(...)         # PPO-specific training logic
     """
 
-    def __init__(self, obs_shape, n_actions: int, feat_dim: int = 256):
+    def __init__(
+        self,
+        obs_shape,
+        n_actions: int,
+        feat_dim: int = 256,
+        backbone: str = "cnn",
+        freeze_backbone: bool = True,
+    ):
         """
         obs_shape: (frame_stack, 3, H, W) from DoomEnv.observation_shape
         n_actions: size of discrete action space
+
+        backbone:
+            "cnn"    -> use simple Conv encoder (ActorCritic)
+            "dinov2" -> use DinoV2ActorCritic
+            "dinov3" -> use DinoV3ActorCritic (requires HF gated access)
+            HuggingFace model name for DINO backbone when using dinov2/dinov3.
         """
         super().__init__()
         frame_stack, c, h, w = obs_shape
         assert c == 3, f"Expected 3 channels per frame (RGB), got {c}"
         in_channels = frame_stack * c
 
-        self.ac = ActorCritic(
-            in_channels=in_channels,
-            n_actions=n_actions,
-            feat_dim=feat_dim,
-        )
+        self.backbone = backbone.lower()
+        self.n_actions = n_actions
+
+        if self.backbone == "cnn":
+            # Original CNN-based actor-critic
+            self.ac = ActorCritic(
+                in_channels=in_channels,
+                n_actions=n_actions,
+                feat_dim=feat_dim,
+            )
+
+        elif self.backbone == "dinov2":
+            # DINOv2-based actor-critic (encoder is usually frozen)
+            self.ac = DinoV2ActorCritic(
+                in_channels=in_channels,
+                n_actions=n_actions,
+                model_name="facebook/dinov2-small",
+                freeze_backbone=freeze_backbone,
+                hidden_dim=feat_dim,  # optional small MLP head dim
+            )
+
+        elif self.backbone == "dinov3":
+            # DINOv3-based actor-critic (requires gated access on HF)
+            self.ac = DinoV3ActorCritic(
+                in_channels=in_channels,
+                n_actions=n_actions,
+                model_name="facebook/dinov3-vits16-pretrain-lvd1689m",
+                freeze_backbone=freeze_backbone,
+                hidden_dim=feat_dim,
+            )
+
+        else:
+            raise ValueError(
+                f"Unknown backbone '{backbone}'. "
+                f"Expected one of ['cnn', 'dinov2', 'dinov3']."
+            )
 
     # --- core API used during rollout / evaluation ---
     @torch.no_grad()

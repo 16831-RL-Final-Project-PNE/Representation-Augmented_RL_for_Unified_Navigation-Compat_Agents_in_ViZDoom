@@ -170,6 +170,15 @@ def main():
         choices=["basic", "my_way_home"],
         default="basic",
     )
+
+    parser.add_argument(
+        "--action_space",
+        type=str,
+        default="no_shoot",
+        choices=["usual", "no_shoot"],
+        help="ViZDoom action space to run.",
+    )
+
     parser.add_argument("--episodes", type=int, default=5)
     parser.add_argument("--frame_repeat", type=int, default=4)
     parser.add_argument("--frame_stack", type=int, default=4)
@@ -211,6 +220,7 @@ def main():
 
     env = DoomEnv(
         scenario=args.scenario,
+        action_space=args.action_space,
         frame_repeat=args.frame_repeat,
         frame_stack=args.frame_stack,
         width=args.width,

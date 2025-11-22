@@ -69,15 +69,15 @@ def main():
     parser.add_argument(
         "--tb_dirname",
         type=str,
-        default=None,
+        default="tb_basic_random",
         help="Subdirectory name under log_root for TensorBoard logs. "
-             "Default: tb_random_<scenario>.",
+             "Default: tb_<scenario>_random.",
     )
     parser.add_argument(
         "--eval_log_name",
         type=str,
-        default=None,
-        help="Eval npz file name under log_root. Default: random_<scenario>_eval.npz.",
+        default="basic_random_eval.npz",
+        help="Eval npz file name under log_root. Default: <scenario>_random_eval.npz.",
     )
 
     # ----- Checkpoint settings -----
@@ -90,8 +90,8 @@ def main():
     parser.add_argument(
         "--checkpoint_name",
         type=str,
-        default=None,
-        help="Base name of the checkpoint file. Default: random_<scenario>.",
+        default="basic_random",
+        help="Base name of the checkpoint file. Default: <scenario>_random.",
     )
     parser.add_argument(
         "--save_every",

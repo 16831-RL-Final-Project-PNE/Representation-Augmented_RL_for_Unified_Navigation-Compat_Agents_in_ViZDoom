@@ -32,3 +32,8 @@ class PPOConfig:
 
     # whether to use deterministic policy during evaluation
     eval_deterministic: bool = True
+
+    # encoder model
+    feat_dim: int = 256
+    backbone: str = "cnn" # "cnn" / "dinov2" / "dinov3"
+    freeze_backbone: bool = False

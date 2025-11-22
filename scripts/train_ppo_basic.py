@@ -66,7 +66,7 @@ def main():
     parser.add_argument(
         "--tb_log_dir",
         type=str,
-        default="./logs/tb_ppo_basic",
+        default="./logs/tb_basic_ppo",
         help="Directory for TensorBoard logs.",
     )
     parser.add_argument(
@@ -85,14 +85,34 @@ def main():
     parser.add_argument(
         "--checkpoint_name",
         type=str,
-        default="ppo_basic",
-        help="Checkpoint file prefix (e.g., ppo_basic_final.pt).",
+        default="basic_ppo",
+        help="Checkpoint file prefix (e.g., basic_ppo_final.pt).",
     )
     parser.add_argument(
         "--save_every",
         type=int,
         default=0,
         help="0 = only final checkpoint; >0 = also every N iterations.",
+    )
+
+    parser.add_argument(
+        "--feat_dim",
+        type=int,
+        default=256,
+        help="feature dimension output from encoder part.",
+    )
+
+    parser.add_argument(
+        "--backbone",
+        type=str,
+        default="cnn",
+        choices=["cnn", "dinov2", "dinov3"],
+    )    
+
+    parser.add_argument(
+        "--freeze_backbone",
+        action="store_true",
+        help="Freeze the image encoder.",
     )
 
     args = parser.parse_args()
@@ -147,6 +167,9 @@ def main():
         checkpoint_dir=args.checkpoint_dir,
         checkpoint_name=args.checkpoint_name,
         save_every=args.save_every,
+        backbone=args.backbone,
+        feat_dim=args.feat_dim,
+        freeze_backbone=args.freeze_backbone
     )
 
     trainer = RLTrainer(
