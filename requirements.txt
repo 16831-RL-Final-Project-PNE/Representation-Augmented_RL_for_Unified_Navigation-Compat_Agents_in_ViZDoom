@@ -108,3 +108,6 @@ vizdoom==1.2.4
 wandb==0.22.0
 wcwidth==0.2.13
 Werkzeug==3.1.3
+transformers>=4.40
+timm
+accelerate

@@ -7,6 +7,28 @@ from PIL import Image
 import vizdoom as vzd
 from pkg_resources import resource_filename
 
+def _save_gif(out_file: str, frames: list[np.ndarray], fps: int) -> None:
+    """
+    Save a list of HWC uint8 RGB frames as an animated GIF using Pillow.
+
+    This bypasses imageio's GIF writer to avoid transparency / palette issues.
+    """
+    if not frames:
+        return
+
+    pil_frames = [Image.fromarray(f) for f in frames]
+
+    # duration is in milliseconds per frame
+    duration_ms = int(1000 / max(1, fps))
+
+    pil_frames[0].save(
+        out_file,
+        save_all=True,
+        append_images=pil_frames[1:],
+        duration=duration_ms,
+        loop=0,
+    )
+
 def _to_rgb(buf):
     import numpy as np
     arr = np.asarray(buf)
@@ -25,13 +47,13 @@ def _to_rgb(buf):
     elif arr.shape[-1] == 1:
         arr = np.repeat(arr, 3, axis=-1)
 
-    return arr
+    return arr.copy()
 
 
 # ---- unified 12-action space built from {FORWARD, LEFT, RIGHT, SHOOT} (no contradictory combos) ----
 BUTTONS = [vzd.Button.MOVE_FORWARD, vzd.Button.TURN_LEFT,
            vzd.Button.TURN_RIGHT, vzd.Button.ATTACK]
-ACTIONS: List[List[int]] = [
+ACTIONS_BASIC: List[List[int]] = [
     [0,0,0,0],  # 0 noop
     [1,0,0,0],  # 1 forward
     [0,1,0,0],  # 2 left
@@ -46,6 +68,16 @@ ACTIONS: List[List[int]] = [
     [1,0,1,1],  # 11 forward+right+shoot
 ]
 
+# my_way_home deos not need 'shoot', 6 useful actions
+ACTIONS_NO_SHOOT: List[List[int]] = [
+    [0,0,0,0],  # noop
+    [1,0,0,0],  # forward
+    [0,1,0,0],  # left
+    [0,0,1,0],  # right
+    [1,1,0,0],  # forward+left
+    [1,0,1,0],  # forward+right
+]
+
 class DoomEnv:
     """
     Minimal Gym-like wrapper (without Gym dependency):
@@ -56,6 +88,7 @@ class DoomEnv:
     """
     def __init__(self,
                  scenario: str = "basic",    # "basic" or "my_way_home"
+                 action_space: str = "no_shoot", #"no-shoot" or "usual"
                  frame_repeat: int = 4,      # repeat the chosen action for N game tics
                  frame_stack: int = 4,       # concatenate last N frames
                  width: int = 84,
@@ -72,6 +105,11 @@ class DoomEnv:
         self._stack: deque = deque(maxlen=self.frame_stack)
         self._last_rgb: Optional[np.ndarray] = None
         self._last_rgb_native: Optional[np.ndarray] = None
+
+        if action_space == "no_shoot":
+            self._action = ACTIONS_NO_SHOOT
+        else:
+            self._action = ACTIONS_BASIC
 
         # --- build and init the ViZDoom game ---
         self.game = vzd.DoomGame()
@@ -162,7 +200,7 @@ class DoomEnv:
 
     @property
     def action_space_n(self) -> int:
-        return len(ACTIONS)
+        return len(self._action)
 
     def reset(self) -> np.ndarray:
         self.game.new_episode()
@@ -181,7 +219,7 @@ class DoomEnv:
         action = int(action)
 
         # ---- move forward through every tic frame ----
-        self.game.set_action(ACTIONS[action])
+        self.game.set_action(self._action[action])
         step_reward = 0.0
         tic_frames = []
         last_hwc = None
@@ -192,8 +230,8 @@ class DoomEnv:
             s = self.game.get_state()
             if s is not None and s.screen_buffer is not None:
                 hwc = _to_rgb(s.screen_buffer)
-                tic_frames.append(hwc)          # ← 每個 tic 一張
-                self._last_rgb_native = hwc     # ← render() 用原生解析度
+                tic_frames.append(hwc)          # ← tic 
+                self._last_rgb_native = hwc     # ← render() using original resolution
                 last_hwc = hwc
 
         done = self.game.is_episode_finished()
@@ -211,7 +249,7 @@ class DoomEnv:
         if not done:
             # use last tic frame to generate obs
             if last_hwc is not None:
-                obs = self._proc_frame(last_hwc)  # 內部會同步 _last_rgb_native
+                obs = self._proc_frame(last_hwc)  # _last_rgb_native
             else:
                 obs = self._proc_frame(self._read_rgb())
             self._stack.append(obs)
@@ -234,15 +272,49 @@ class DoomEnv:
                 "return": self._ep_return,
                 "episode": self.episode_summary(),
             })
+            if self._last_rgb_native is not None:
+                # Make sure we keep a copy of the last visible RGB frame
+                info["last_screen"] = self._last_rgb_native.copy()
 
         return self._get_obs(), float(step_reward), bool(done), info
 
+    '''
     def render(self, mode: str = "rgb_array") -> Optional[np.ndarray]:
         if mode != "rgb_array":
             return None
         if self._last_rgb is None:
             return np.transpose(self._zero, (1, 2, 0))
         return self._last_rgb
+    '''
+
+    def render(self, mode: str = "rgb_array") -> Optional[np.ndarray]:
+        """
+        Return the current ViZDoom RGB frame in HWC uint8 format.
+
+        We always try to pull the latest screen_buffer from the engine.
+        If for some reason it's not available, we fall back to the last
+        native frame we saw, and finally to a black image.
+        """
+        if mode != "rgb_array":
+            return None
+
+        if self.game is not None:
+            state = self.game.get_state()
+        else:
+            state = None
+
+        if state is not None and state.screen_buffer is not None:
+            # Convert ViZDoom's CHW buffer to HWC RGB uint8
+            frame = _to_rgb(state.screen_buffer)     # (H, W, 3)
+            self._last_rgb_native = frame
+            return frame
+
+        # Fallbacks if state/screen_buffer is not available
+        if self._last_rgb_native is not None:
+            return self._last_rgb_native
+
+        # Last resort: black frame in HWC
+        return np.transpose(self._zero, (1, 2, 0))
 
     def close(self):
         if self.game is not None:
