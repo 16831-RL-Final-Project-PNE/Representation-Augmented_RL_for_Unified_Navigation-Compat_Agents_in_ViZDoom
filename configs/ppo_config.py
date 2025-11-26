@@ -37,3 +37,25 @@ class PPOConfig:
     feat_dim: int = 256
     backbone: str = "cnn" # "cnn" / "dinov2" / "dinov3"
     freeze_backbone: bool = False
+
+    # ---------------------------
+    # RND exploration (optional)
+    # ---------------------------
+    # When False, RLTrainer behaves exactly as before (no intrinsic reward).
+    use_rnd: bool = False
+
+    # Reward mixing:
+    # total_reward = rnd_ext_coef * extrinsic + rnd_int_coef * normalized_intrinsic
+    rnd_int_coef: float = 1.0
+    rnd_ext_coef: float = 1.0
+
+    # EMA smoothing for std of intrinsic reward
+    rnd_gamma: float = 0.99
+
+    # RND optimizer hyperparameters
+    rnd_lr: float = 1e-4
+    rnd_weight_decay: float = 1e-4
+
+    # RND training schedule per rollout
+    rnd_batch_size: int = 256
+    rnd_epochs: int = 1

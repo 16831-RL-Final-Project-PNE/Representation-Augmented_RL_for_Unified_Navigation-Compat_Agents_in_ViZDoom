@@ -21,6 +21,13 @@ class RLTrainer:
     """
     Generic RL trainer that can work with different agents.
     For now, it implements PPO training for PPOAgent.
+
+    Optional RND integration:
+      - If config.use_rnd is False (default), behavior is identical
+        to the original RLTrainer (no intrinsic reward).
+      - If config.use_rnd is True and agent_type == "ppo", we use a
+        Random Network Distillation model to produce intrinsic rewards
+        and shape the reward before computing returns for PPO.
     """
 
     def __init__(
@@ -44,13 +51,14 @@ class RLTrainer:
         self.agent = self._build_agent(self.agent_type).to(self.device)
 
         # Optimizer: only needed for trainable agents (e.g., PPO).
-        # RandomAgent has no parameters, so we skip creating an optimizer.
         if agent_type == "random":
             self.optimizer = None
         else:
-            self.optimizer = torch.optim.Adam(
+            # AdamW for PPO
+            self.optimizer = torch.optim.AdamW(
                 self.agent.parameters(),
                 lr=self.config.learning_rate,
+                weight_decay=1e-4,
             )
 
         self.buffer = RolloutBuffer(
@@ -72,6 +80,33 @@ class RLTrainer:
         self.writer = SummaryWriter(log_dir=self.config.log_dir)
 
         os.makedirs(self.config.checkpoint_dir, exist_ok=True)
+
+        # ------------------------
+        # Optional RND components
+        # ------------------------
+        # Ensure backward compatibility with older configs that do not
+        # have RND fields.
+        self.use_rnd = bool(getattr(self.config, "use_rnd", False)) and (self.agent_type == "ppo")
+
+        if self.use_rnd:
+            from exploration.rnd_model import RNDModel  # imported only when needed
+
+            frame_stack, c, h, w = self.obs_shape
+            in_channels = frame_stack * c
+            rnd_lr = float(getattr(self.config, "rnd_lr", 1e-4))
+            rnd_weight_decay = float(getattr(self.config, "rnd_weight_decay", 1e-4))
+
+            self.rnd_model = RNDModel(
+                obs_shape=(in_channels, h, w),
+                lr=rnd_lr,
+                weight_decay=rnd_weight_decay,
+                device=str(self.device),
+            )
+            # Running std for intrinsic reward normalization
+            self.rnd_running_std: float = 1.0
+        else:
+            self.rnd_model = None
+            self.rnd_running_std = 1.0
 
     def _build_agent(self, agent_type: str):
         """
@@ -107,10 +142,17 @@ class RLTrainer:
         obs_t = obs_t.reshape(1, t * c, h, w).float() / 255.0
         return obs_t.to(self.device)
 
-    def collect_rollout(self) -> Dict[str, List[float]]:
+    def collect_rollout(self) -> Dict[str, List[float] | float]:
         """
         Collect one rollout of length steps_per_iteration into the buffer.
         Also track per-episode returns and lengths for training metrics.
+
+        If RND is enabled, we will:
+          - compute intrinsic rewards for all collected states,
+          - normalize them using an EMA of their std,
+          - mix them with extrinsic rewards,
+          - overwrite buffer.rewards with the mixed reward,
+          - train the RND predictor once on this rollout.
         """
         self.buffer.reset()
         obs = self.env.reset()
@@ -120,8 +162,12 @@ class RLTrainer:
         ep_ret = 0.0
         ep_len = 0
 
+        rnd_loss: Optional[float] = None
+        rnd_int_mean: Optional[float] = None
+        rnd_int_std: Optional[float] = None
+
         # Use tqdm to show per-iteration progress over environment steps
-        for step in trange(
+        for _ in trange(
             self.config.steps_per_iteration,
             desc="Collecting rollout",
             leave=False,
@@ -162,19 +208,74 @@ class RLTrainer:
             train_returns.append(ep_ret)
             train_ep_lens.append(ep_len)
 
+        # --------------------------
+        # RND reward shaping (PPO)
+        # --------------------------
+        if self.use_rnd and self.buffer.size > 0:
+            frame_stack, c, h, w = self.obs_shape
+            n = self.buffer.size
+
+            # Observations: (N, T, 3, H, W) uint8
+            obs_batch = self.buffer.observations[:n]  # uint8
+            # Flatten frame stack into channels: (N, C, H, W) where C = T * 3
+            obs_flat = obs_batch.reshape(n, frame_stack * c, h, w)
+
+            # Compute intrinsic reward
+            with torch.no_grad():
+                int_rewards = self.rnd_model.compute_intrinsic_reward(obs_flat)  # (N,)
+            # On device; bring to CPU for mixing/logging
+            int_rewards_cpu = int_rewards.detach().cpu()
+
+            # Normalize intrinsic reward with EMA of std
+            batch_std = float(int_rewards_cpu.std().item()) + 1e-8
+            rnd_gamma = float(getattr(self.config, "rnd_gamma", 0.99))
+            self.rnd_running_std = (
+                rnd_gamma * self.rnd_running_std
+                + (1.0 - rnd_gamma) * batch_std
+            )
+            norm_factor = self.rnd_running_std + 1e-8
+            int_rewards_norm_cpu = int_rewards_cpu / norm_factor
+
+            # Mix extrinsic and intrinsic
+            ext_rewards = self.buffer.rewards[:n]  # (N,) float32 on CPU
+            int_coef = float(getattr(self.config, "rnd_int_coef", 1.0))
+            ext_coef = float(getattr(self.config, "rnd_ext_coef", 1.0))
+
+            mixed_rewards = ext_coef * ext_rewards + int_coef * int_rewards_norm_cpu
+            self.buffer.rewards[:n] = mixed_rewards.to(self.buffer.rewards.device)
+
+            # Train RND predictor on this rollout
+            rnd_batch_size = int(getattr(self.config, "rnd_batch_size", 256))
+            rnd_epochs = int(getattr(self.config, "rnd_epochs", 1))
+            rnd_loss = float(self.rnd_model.update(
+                obs_flat,
+                batch_size=rnd_batch_size,
+                epochs=rnd_epochs,
+            ))
+
+            rnd_int_mean = float(int_rewards_norm_cpu.mean().item())
+            rnd_int_std = float(int_rewards_norm_cpu.std().item())
+
         # Bootstrap value for the last state
         obs_tensor = self._obs_to_tensor(obs)
         with torch.no_grad():
             last_value = float(self.agent.get_value(obs_tensor).item())
 
+        # Compute returns and advantages using (possibly modified) rewards
         self.buffer.compute_returns_and_advantages(last_value)
 
         self.total_envsteps += self.config.steps_per_iteration
 
-        return {
+        out: Dict[str, List[float] | float] = {
             "train_returns": train_returns,
             "train_ep_lens": train_ep_lens,
         }
+        if rnd_loss is not None:
+            out["RND_Loss"] = rnd_loss
+            out["RND_IntReward_Mean"] = rnd_int_mean
+            out["RND_IntReward_Std"] = rnd_int_std
+
+        return out
 
     def update_policy(self) -> Dict[str, float]:
         """
@@ -268,8 +369,11 @@ class RLTrainer:
             self.initial_return = logs["Train_AverageReturn"]
         logs["Initial_DataCollection_AverageReturn"] = float(self.initial_return)
 
-        # Add training losses
+        # Add training losses from the agent (PPO)
         logs.update(train_logs)
+
+        # If RND logs were attached to train_logs (via train()), they are already here.
+        # If you want them guaranteed, you can add them in RLTrainer.train().
 
         # Print + TensorBoard
         for key, value in logs.items():
@@ -317,7 +421,7 @@ class RLTrainer:
         for iteration in range(self.config.total_iterations):
             print(f"\n\n********** Iteration {iteration} ************")
 
-            # 1) collect rollout + train metrics
+            # 1) collect rollout + train metrics (and possibly RND metrics)
             rollout_info = self.collect_rollout()
             train_returns = rollout_info["train_returns"]
             train_ep_lens = rollout_info["train_ep_lens"]
@@ -325,7 +429,14 @@ class RLTrainer:
             # 2) Agent update
             train_logs = self.update_policy()
 
-            # 3) evaluation for logging
+            # Attach RND logs (if present) into train_logs for logging
+            rnd_loss = rollout_info.get("RND_Loss")
+            if rnd_loss is not None:
+                train_logs["RND_Loss"] = float(rollout_info["RND_Loss"])
+                train_logs["RND_IntReward_Mean"] = float(rollout_info["RND_IntReward_Mean"])
+                train_logs["RND_IntReward_Std"] = float(rollout_info["RND_IntReward_Std"])
+
+            # 3) evaluation for logging (uses env's extrinsic reward only)
             eval_returns, eval_ep_lens = evaluate_policy(
                 env=self.eval_env,
                 agent=self.agent,
