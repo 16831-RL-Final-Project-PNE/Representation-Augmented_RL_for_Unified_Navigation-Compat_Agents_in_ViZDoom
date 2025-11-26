@@ -5,13 +5,12 @@ from dataclasses import dataclass, field
 class DreamerV2Config:
     total_iterations: int = 200
     steps_per_iteration: int = 8192
-    batch_size: int = 64
-    learning_rate: dict[str, float] = field(default_factory=lambda: {'world_model': 2e-4, 'actor_model': 4e-5, 'value_model': 1e-4})
+    learning_rate: dict[str, float] = field(default_factory=lambda: {'world_model': 1e-4, 'actor_model': 1e-4, 'value_model': 1e-4})
 
     gamma: float = 0.99
     gae_lambda: float = 0.95
     
-    epochs: int = 4
+    epochs: int = 10
     collect_intervals: int = 5
 
     eval_episodes: int = 10
@@ -31,7 +30,6 @@ class DreamerV2Config:
     # DreamerV2 Model Config
     embedding_size: int = 256
     batch_size: int = 50
-    horizon: int = 10
     grad_clip_norm: float = 100.0
 
     use_dino_v3: bool = True
@@ -42,7 +40,8 @@ class DreamerV2Config:
     rssm_category_size: int = 20
     rssm_class_size: int = 20
     rssm_node_size: int = 100
-    rssm_seq_len: int = 10
+    rssm_seq_len: int = 20
+    rssm_horizon: int = 15
 
     kl_use_kl_balance: bool = True
     kl_balance_scale: float = 0.8

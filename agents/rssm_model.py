@@ -62,7 +62,7 @@ class RSSMDiscrete(nn.Module):
         logit = torch.reshape(rssm_state.logit, shape = (*shape[:-1], self.category_size, self.class_size))
         return td.Independent(td.OneHotCategoricalStraightThrough(logits=logit), 1)
     
-    def rssm_imagine(self, prev_action, prev_rssm_state, nonterms=True):
+    def rssm_imagine(self, prev_action, prev_rssm_state, nonterms):
         state_action_embed = self.state_action_embedder(torch.cat([prev_rssm_state.stoch*nonterms, prev_action],dim=-1))
         deter_state = self.rnn(state_action_embed, prev_rssm_state.deter*nonterms)
         prior_logit = self.temporal_prior(deter_state)
@@ -76,8 +76,8 @@ class RSSMDiscrete(nn.Module):
         action_entropy = []
         imag_log_probs = []
         for t in range(horizon):
-            action, action_dist = actor((self.get_model_state(rssm_state)).detach())
-            rssm_state = self.rssm_imagine(action, rssm_state)
+            action, action_dist = actor(self.get_model_state(rssm_state))
+            rssm_state = self.rssm_imagine(action, rssm_state, nonterms=torch.ones(1, dtype=torch.bool, device=rssm_state.stoch.device))
             next_rssm_states.append(rssm_state)
             action_entropy.append(action_dist.entropy())
             imag_log_probs.append(action_dist.log_prob(torch.round(action.detach())))
@@ -118,6 +118,8 @@ class RSSMDiscrete(nn.Module):
         return prior, post
 
     def _init_rssm_state(self, batch_size, **kwargs):
+        if 'device' not in kwargs:
+            kwargs['device'] = next(self.parameters()).device
         return RSSMDiscState(
             torch.zeros(batch_size, self.stoch_size, **kwargs),
             torch.zeros(batch_size, self.stoch_size, **kwargs),

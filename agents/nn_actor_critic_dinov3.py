@@ -69,6 +69,10 @@ class DinoV3Encoder(nn.Module):
         x: (B, 3, H, W) in [0, 1] or uint8 [0, 255]
         returns: (B, out_dim)
         """
+        batch_shape = x.shape[:-3]
+        img_shape = x.shape[-3:]
+        x = x.reshape(-1, *img_shape)
+
         if x.dtype == torch.uint8:
             x = x.float() / 255.0
 
@@ -86,9 +90,12 @@ class DinoV3Encoder(nn.Module):
         # DINO-style models usually take 'pixel_values'=(B,3,H,W)
         outputs = self.backbone(pixel_values=x)
 
+        # outputs = torch.reshape(outputs, (*batch_shape, -1))
+
         # Get a single feature vector per image
         if hasattr(outputs, "pooler_output") and outputs.pooler_output is not None:
             feat = outputs.pooler_output  # (B, D)
+            feat = torch.reshape(feat, (*batch_shape, -1))
         elif hasattr(outputs, "last_hidden_state"):
             # (B, N, D) tokens: use CLS token if present, else mean pool
             tokens = outputs.last_hidden_state

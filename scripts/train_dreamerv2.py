@@ -92,6 +92,12 @@ def main():
         help="0 = only final checkpoint; >0 = also every N iterations.",
     )
 
+    parser.add_argument(
+        "--use_dino_v3",
+        action="store_true",
+        help="Use DinoV3 encoder if set.",
+    )
+
     args = parser.parse_args()
 
     # ----- Create needed directories -----
@@ -140,6 +146,7 @@ def main():
         checkpoint_dir=args.checkpoint_dir,
         checkpoint_name=args.checkpoint_name,
         save_every=args.save_every,
+        use_dino_v3=args.use_dino_v3,
     )
 
     trainer = RLTrainer(

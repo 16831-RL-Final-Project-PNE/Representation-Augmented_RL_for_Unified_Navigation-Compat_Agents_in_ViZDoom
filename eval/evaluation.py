@@ -29,6 +29,7 @@ def evaluate_policy(
     device: torch.device,
     deterministic: bool = True,
     return_raw: bool = False,
+    agent_type: str = 'random',
 ):
     """
     Run evaluation episodes.
@@ -49,6 +50,8 @@ def evaluate_policy(
         while not done:
             obs_tensor = stacked_obs_to_tensor(obs, device)
             action, _, _ = agent.act(obs_tensor, deterministic=deterministic)
+            if agent_type == 'dreamerv2':
+                action = action.argmax(dim=-1)
             obs, reward, done, _info = env.step(int(action.item()))
             ep_ret += float(reward)
             ep_len += 1

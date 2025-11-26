@@ -157,7 +157,7 @@ class RLTrainer:
             desc="Collecting rollout",
             leave=False,
         ):
-            obs_tensor = self._obs_to_tensor(obs)
+            obs_tensor = self._obs_to_tensor(obs).to(self.device)
 
             with torch.no_grad():
                 actions, log_probs, values = self.agent.act(obs_tensor, deterministic=True)
@@ -199,7 +199,7 @@ class RLTrainer:
             train_ep_lens.append(ep_len)
 
         # Bootstrap value for the last state
-        obs_tensor = self._obs_to_tensor(obs)
+        obs_tensor = self._obs_to_tensor(obs).to(self.device)
         with torch.no_grad():
             last_value = float(self.agent.get_value(obs_tensor).item())
 
@@ -369,6 +369,7 @@ class RLTrainer:
                 device=self.device,
                 deterministic=self.config.eval_deterministic,
                 return_raw=True,
+                agent_type=self.agent_type,
             )
 
             # 4) aggregate + log

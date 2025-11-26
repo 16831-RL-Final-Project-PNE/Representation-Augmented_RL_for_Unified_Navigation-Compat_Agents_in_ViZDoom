@@ -174,9 +174,10 @@ class DreamerV2Agent(nn.Module):
         return [param for model in model_list for param in model.parameters()]
 
     def reset(self):
-        self.prev_rssm_state = self.rssm._init_rssm_state(1)
-        self.prev_action = torch.zeros(1, self.action_size)
-        self.prev_nonterm = torch.zeros(1, dtype=torch.bool)
+        device = next(self.parameters()).device
+        self.prev_rssm_state = self.rssm._init_rssm_state(1, device=device)
+        self.prev_action = torch.zeros(1, self.action_size, device=device)
+        self.prev_nonterm = torch.zeros(1, dtype=torch.bool, device=device)
 
     # --- core API used during rollout / evaluation ---
     @torch.no_grad()
@@ -196,12 +197,12 @@ class DreamerV2Agent(nn.Module):
         if deterministic:
             idx = torch.argmax(action_dist.probs, dim=-1).long()
         else:
-            idx = action_dist.sample().long()
+            idx = td.Categorical(probs=action_dist.probs).sample().long()
         # log_pi(a_t|m_t)
         actions = F.one_hot(idx, num_classes=self.action_size).float()
         log_probs = action_dist.log_prob(actions)
         # update prev_nonterm, prev_rssm_state, prev_action
-        self.prev_nonterm = torch.ones(1, dtype=torch.bool)
+        self.prev_nonterm = torch.ones(1, dtype=torch.bool, device=self.prev_nonterm.device)
         self.prev_rssm_state = posterior_rssm_state
         self.prev_action = actions
 
@@ -349,10 +350,10 @@ class DreamerV2Agent(nn.Module):
             batched_posterior = self.rssm.rssm_detach(self.rssm.rssm_seq_to_batch(posterior, self.config.batch_size, self.config.rssm_seq_len - 1))
         
         with FreezeParameters(self.models_map['world_models']):
-            imag_rssm_states, imag_log_prob, policy_entropy = self.rssm.rollout_imagination(self.config.horizon, self.action_model, batched_posterior)
+            imag_rssm_states, imag_log_prob, policy_entropy = self.rssm.rollout_imagination(self.config.rssm_horizon, self.action_model, batched_posterior)
         
         imag_model_states = self.rssm.get_model_state(imag_rssm_states)
-        with FreezeParameters(self.models_map['world_models'] + self.models_map['value_models'] + [self.target_value_model] + [self.discount_model]):
+        with FreezeParameters(self.models_map['world_models'] + [self.target_value_model] + [self.discount_model]):
             imag_reward_dist = self.reward_decoder(imag_model_states)
             imag_reward = imag_reward_dist.mean
             imag_value_dist = self.target_value_model(imag_model_states)
@@ -360,10 +361,8 @@ class DreamerV2Agent(nn.Module):
             discount_dist = self.discount_model(imag_model_states)
             discount_arr = self.config.gamma * torch.round(discount_dist.base_dist.probs)              #mean = prob(disc==1)
 
-        print("Computing Actor Loss ...")
         actor_loss, discount, lambda_returns = self.actor_loss(imag_reward, imag_value, discount_arr, imag_log_prob, policy_entropy)
-        print("Computing Critic Loss ...")
-        critic_loss = self.critic_loss(imag_model_states, discount, lambda_returns)     
+        critic_loss = self.critic_loss(imag_model_states, discount, lambda_returns)
 
         mean_target = torch.mean(lambda_returns, dim=1)
         max_targ = torch.max(mean_target).item()
@@ -407,7 +406,7 @@ class DreamerV2Agent(nn.Module):
         ):
             for i in range(config.collect_intervals):
                 batch = buffer.sample_sequences(config.rssm_seq_len, config.batch_size)
-                obs_batch = batch["observations"]  # (B, C, H, W) already on correct device
+                obs_batch = batch["observations"]  # (B, L, C, H, W) already on correct device
                 actions = batch["actions"]
                 rewards = batch["rewards"]
                 dones = batch["dones"]
@@ -422,8 +421,8 @@ class DreamerV2Agent(nn.Module):
                 if rewards.dim() == 2:
                     rewards = rewards.unsqueeze(-1)
 
-                print("Representation Loss ...")
                 loss_dict = self.representation_loss(obs_batch, actions, rewards, nonterms)
+
 
                 optimizer['world_model'].zero_grad()
                 loss_dict['world_model_loss'].backward()
@@ -431,14 +430,23 @@ class DreamerV2Agent(nn.Module):
                 grad_norm_model = torch.nn.utils.clip_grad_norm_(self.get_parameters(self.models_map['world_models']), self.config.grad_clip_norm)
                 optimizer['world_model'].step()
 
-                print("Actor Critic Loss ...")
+                # Antes de actualizar
+                before = {}
+                for name, p in self.value_model.named_parameters():
+                    before[name] = p.clone().detach()
+
                 actor_loss, value_loss, target_info = self.actor_critic_loss(loss_dict['posterior'])
+
 
                 optimizer['action_model'].zero_grad()
                 optimizer['value_model'].zero_grad()
 
                 actor_loss.backward()
                 value_loss.backward()
+                # Después del update
+                for name, p in self.value_model.named_parameters():
+                    diff = (p - before[name]).abs().mean().item()
+                    print(f"{name}: Δ = {diff}")
 
                 grad_norm_actor = torch.nn.utils.clip_grad_norm_(self.get_parameters(self.models_map['action_models']), self.config.grad_clip_norm)
                 grad_norm_value = torch.nn.utils.clip_grad_norm_(self.get_parameters(self.models_map['value_models']), self.config.grad_clip_norm)
