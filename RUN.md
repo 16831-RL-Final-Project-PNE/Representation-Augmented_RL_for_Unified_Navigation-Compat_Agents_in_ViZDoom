@@ -123,14 +123,15 @@ python -m scripts.train_ppo_basic \
   --checkpoint_name mwh_ppo_v2 \
   --save_every 0
 
-CUDA_VISIBLE_DEVICES=2 python -m scripts.train_ppo_basic \
+# attempting
+CUDA_VISIBLE_DEVICES=0 python -m scripts.train_ppo_basic \
   --scenario my_way_home \
   --action_space no_shoot \
   --backbone cnn \
   --feat_dim 256 \
   --total_iterations 200 \
   --steps_per_iteration 16384 \
-  --batch_size 256 \
+  --batch_size 32 \
   --learning_rate 3e-4 \
   --clip_coef 0.2 \
   --value_coef 0.5 \
@@ -171,6 +172,7 @@ CUDA_VISIBLE_DEVICES=7 python -m scripts.train_ppo_basic \
   --backbone dinov3 \
   --freeze_backbone
 
+# already run
 CUDA_VISIBLE_DEVICES=0 python -m scripts.train_ppo_basic \
   --scenario basic \
   --action_space usual \
@@ -220,6 +222,7 @@ python -m scripts.train_ppo_basic \
   --backbone dinov3 \
   --freeze_backbone
 
+# attempting
 CUDA_VISIBLE_DEVICES=5 python -m scripts.train_ppo_basic \
   --scenario my_way_home \
   --action_space no_shoot \
@@ -268,6 +271,36 @@ CUDA_VISIBLE_DEVICES=5 python -m scripts.train_ppo_basic \
   --backbone dinov2 \
   --freeze_backbone
 
+# attempting
+CUDA_VISIBLE_DEVICES=5 python -m scripts.train_ppo_basic \
+  --scenario basic \
+  --action_space usual \
+  --backbone dinov2 \
+  --freeze_backbone \
+  --feat_dim 256 \
+  --total_iterations 200 \
+  --steps_per_iteration 8192 \
+  --batch_size 64 \
+  --learning_rate 1e-4 \
+  --clip_coef 0.1 \
+  --value_coef 0.5 \
+  --entropy_coef 0.01 \
+  --use_rnd \
+  --rnd_int_coef 0.2 \
+  --rnd_ext_coef 1.0 \
+  --rnd_gamma 0.99 \
+  --rnd_lr 1e-4 \
+  --rnd_weight_decay 1e-4 \
+  --rnd_batch_size 256 \
+  --rnd_epochs 1 \
+  --eval_log_dir ./logs \
+  --eval_log_name basic_ppo_dinov2_rnd_eval.npz \
+  --tb_log_dir ./logs/tb_basic_ppo_dinov2_rnd \
+  --checkpoint_dir /data/patrick/16831RL/checkpoints \
+  --checkpoint_name basic_ppo_dinov2_rnd \
+  --save_every 60
+
+
 CUDA_VISIBLE_DEVICES=1 python -m scripts.train_ppo_basic \
   --scenario my_way_home \
   --action_space no_shoot \
@@ -288,6 +321,35 @@ CUDA_VISIBLE_DEVICES=1 python -m scripts.train_ppo_basic \
   --save_every 80 \
   --backbone dinov2 \
   --freeze_backbone
+
+# attempting
+CUDA_VISIBLE_DEVICES=5 python -m scripts.train_ppo_basic \
+  --scenario my_way_home \
+  --action_space no_shoot \
+  --backbone dinov2 \
+  --freeze_backbone \
+  --feat_dim 256 \
+  --total_iterations 200 \
+  --steps_per_iteration 16384 \
+  --batch_size 64 \
+  --learning_rate 3e-4 \
+  --clip_coef 0.2 \
+  --value_coef 0.5 \
+  --entropy_coef 0.01 \
+  --use_rnd \
+  --rnd_int_coef 0.4 \
+  --rnd_ext_coef 1.0 \
+  --rnd_gamma 0.99 \
+  --rnd_lr 1e-4 \
+  --rnd_weight_decay 1e-4 \
+  --rnd_batch_size 256 \
+  --rnd_epochs 1 \
+  --eval_log_dir ./logs \
+  --eval_log_name mwh_ppo_dinov2_rnd_eval.npz \
+  --tb_log_dir ./logs/tb_mwh_ppo_dinov2_rnd \
+  --checkpoint_dir /data/patrick/16831RL/checkpoints \
+  --checkpoint_name mwh_ppo_dinov2_rnd \
+  --save_every 60
 
 
 # 2 use unified evaluator to plot average eval return vs interations
