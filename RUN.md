@@ -63,7 +63,7 @@ CUDA_VISIBLE_DEVICES=5 python -m scripts.train_ppo_basic \
   --scenario basic \
   --action_space usual \
   --total_iterations 200 \
-  --steps_per_iteration 16384 \
+  --steps_per_iteration 8192 \
   --batch_size 128 \
   --learning_rate 1e-4 \
   --clip_coef 0.1 \
@@ -75,7 +75,34 @@ CUDA_VISIBLE_DEVICES=5 python -m scripts.train_ppo_basic \
   --tb_log_dir ./logs/tb_basic_ppo \
   --checkpoint_dir ./checkpoints \
   --checkpoint_name basic_ppo \
-  --save_every 0
+  --save_every 40
+
+CUDA_VISIBLE_DEVICES=5 python -m scripts.train_ppo_basic \
+  --scenario basic \
+  --action_space usual \
+  --backbone cnn \
+  --feat_dim 256 \
+  --total_iterations 200 \
+  --steps_per_iteration 8192 \
+  --batch_size 128 \
+  --learning_rate 2.5e-4 \
+  --clip_coef 0.1 \
+  --value_coef 0.5 \
+  --entropy_coef 0.01 \
+  --use_rnd \
+  --rnd_int_coef 0.3 \
+  --rnd_ext_coef 1.0 \
+  --rnd_gamma 0.99 \
+  --rnd_lr 1e-4 \
+  --rnd_weight_decay 1e-4 \
+  --rnd_batch_size 256 \
+  --rnd_epochs 1 \
+  --eval_log_dir ./logs \
+  --eval_log_name basic_ppo_rnd_eval.npz \
+  --tb_log_dir ./logs/tb_basic_ppo_rnd \
+  --checkpoint_dir /data/patrick/16831RL/checkpoints \
+  --checkpoint_name basic_ppo_rnd \
+  --save_every 80
 
 python -m scripts.train_ppo_basic \
   --scenario my_way_home \
@@ -96,7 +123,82 @@ python -m scripts.train_ppo_basic \
   --checkpoint_name mwh_ppo_v2 \
   --save_every 0
 
+CUDA_VISIBLE_DEVICES=2 python -m scripts.train_ppo_basic \
+  --scenario my_way_home \
+  --action_space no_shoot \
+  --backbone cnn \
+  --feat_dim 256 \
+  --total_iterations 200 \
+  --steps_per_iteration 16384 \
+  --batch_size 256 \
+  --learning_rate 3e-4 \
+  --clip_coef 0.2 \
+  --value_coef 0.5 \
+  --entropy_coef 0.01 \
+  --use_rnd \
+  --rnd_int_coef 0.5 \
+  --rnd_ext_coef 1.0 \
+  --rnd_gamma 0.99 \
+  --rnd_lr 1e-4 \
+  --rnd_weight_decay 1e-4 \
+  --rnd_batch_size 256 \
+  --rnd_epochs 1 \
+  --eval_log_dir ./logs \
+  --eval_log_name mwh_ppo_rnd_eval.npz \
+  --tb_log_dir ./logs/tb_mwh_ppo_rnd \
+  --checkpoint_dir /data/patrick/16831RL/checkpoints \
+  --checkpoint_name mwh_ppo_rnd \
+  --save_every 80
+
 # need modified filename
+CUDA_VISIBLE_DEVICES=7 python -m scripts.train_ppo_basic \
+  --scenario basic \
+  --action_space usual \
+  --total_iterations 200 \
+  --steps_per_iteration 8192 \
+  --batch_size 128 \
+  --learning_rate 1e-4 \
+  --clip_coef 0.1 \
+  --value_coef 0.25 \
+  --eval_episodes 10 \
+  --eval_interval 1 \
+  --eval_log_dir ./logs \
+  --eval_log_name basic_ppo_dinov3_eval.npz \
+  --tb_log_dir ./logs/tb_basic_ppo_dinov3 \
+  --checkpoint_dir /data/patrick/16831RL/checkpoints \
+  --checkpoint_name basic_ppo_dinov3 \
+  --save_every 100 \
+  --backbone dinov3 \
+  --freeze_backbone
+
+CUDA_VISIBLE_DEVICES=0 python -m scripts.train_ppo_basic \
+  --scenario basic \
+  --action_space usual \
+  --backbone dinov3 \
+  --freeze_backbone \
+  --feat_dim 256 \
+  --total_iterations 200 \
+  --steps_per_iteration 8192 \
+  --batch_size 32 \
+  --learning_rate 1e-4 \
+  --clip_coef 0.1 \
+  --value_coef 0.5 \
+  --entropy_coef 0.01 \
+  --use_rnd \
+  --rnd_int_coef 0.2 \
+  --rnd_ext_coef 1.0 \
+  --rnd_gamma 0.99 \
+  --rnd_lr 1e-4 \
+  --rnd_weight_decay 1e-4 \
+  --rnd_batch_size 256 \
+  --rnd_epochs 1 \
+  --eval_log_dir ./logs \
+  --eval_log_name basic_ppo_dinov3_rnd_eval.npz \
+  --tb_log_dir ./logs/tb_basic_ppo_dinov3_rnd \
+  --checkpoint_dir /data/patrick/16831RL/checkpoints \
+  --checkpoint_name basic_ppo_dinov3_rnd \
+  --save_every 100
+
 python -m scripts.train_ppo_basic \
   --scenario my_way_home \
   --action_space no_shoot \
@@ -116,6 +218,54 @@ python -m scripts.train_ppo_basic \
   --checkpoint_name ppo_dinov3_mwh_v3 \
   --save_every 80 \
   --backbone dinov3 \
+  --freeze_backbone
+
+CUDA_VISIBLE_DEVICES=5 python -m scripts.train_ppo_basic \
+  --scenario my_way_home \
+  --action_space no_shoot \
+  --backbone dinov3 \
+  --freeze_backbone \
+  --feat_dim 256 \
+  --total_iterations 200 \
+  --steps_per_iteration 16384 \
+  --batch_size 32 \
+  --learning_rate 3e-4 \
+  --clip_coef 0.2 \
+  --value_coef 0.5 \
+  --entropy_coef 0.01 \
+  --use_rnd \
+  --rnd_int_coef 0.4 \
+  --rnd_ext_coef 1.0 \
+  --rnd_gamma 0.99 \
+  --rnd_lr 1e-4 \
+  --rnd_weight_decay 1e-4 \
+  --rnd_batch_size 256 \
+  --rnd_epochs 1 \
+  --eval_log_dir ./logs \
+  --eval_log_name mwh_ppo_dinov3_rnd_eval.npz \
+  --tb_log_dir ./logs/tb_mwh_ppo_dinov3_rnd \
+  --checkpoint_dir /data/patrick/16831RL/checkpoints \
+  --checkpoint_name mwh_ppo_dinov3_rnd \
+  --save_every 80
+
+CUDA_VISIBLE_DEVICES=5 python -m scripts.train_ppo_basic \
+  --scenario basic \
+  --action_space usual \
+  --total_iterations 200 \
+  --steps_per_iteration 8192 \
+  --batch_size 128 \
+  --learning_rate 1e-4 \
+  --clip_coef 0.1 \
+  --value_coef 0.25 \
+  --eval_episodes 10 \
+  --eval_interval 1 \
+  --eval_log_dir ./logs \
+  --eval_log_name basic_ppo_dinov2_eval.npz \
+  --tb_log_dir ./logs/tb_basic_ppo_dinov2 \
+  --checkpoint_dir /data/patrick/16831RL/checkpoints \
+  --checkpoint_name basic_ppo_dinov2 \
+  --save_every 100 \
+  --backbone dinov2 \
   --freeze_backbone
 
 CUDA_VISIBLE_DEVICES=1 python -m scripts.train_ppo_basic \

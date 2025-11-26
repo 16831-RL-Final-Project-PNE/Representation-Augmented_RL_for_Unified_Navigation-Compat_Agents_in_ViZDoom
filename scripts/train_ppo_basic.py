@@ -107,13 +107,34 @@ def main():
         type=str,
         default="cnn",
         choices=["cnn", "dinov2", "dinov3"],
-    )    
+    )
 
     parser.add_argument(
         "--freeze_backbone",
         action="store_true",
         help="Freeze the image encoder.",
     )
+
+    # ----- RND options -----
+    parser.add_argument(
+        "--use_rnd",
+        action="store_true",
+        help="Enable RND intrinsic reward for exploration.",
+    )
+    parser.add_argument("--rnd_int_coef", type=float, default=1.0,
+                        help="Coefficient on intrinsic (RND) reward.")
+    parser.add_argument("--rnd_ext_coef", type=float, default=1.0,
+                        help="Coefficient on extrinsic reward when mixing.")
+    parser.add_argument("--rnd_gamma", type=float, default=0.99,
+                        help="EMA factor for intrinsic reward std.")
+    parser.add_argument("--rnd_lr", type=float, default=1e-4,
+                        help="Learning rate for RND predictor.")
+    parser.add_argument("--rnd_weight_decay", type=float, default=1e-4,
+                        help="Weight decay for RND predictor AdamW.")
+    parser.add_argument("--rnd_batch_size", type=int, default=256,
+                        help="RND predictor batch size per rollout.")
+    parser.add_argument("--rnd_epochs", type=int, default=1,
+                        help="Number of passes over RND data per rollout.")
 
     args = parser.parse_args()
 
@@ -169,7 +190,15 @@ def main():
         save_every=args.save_every,
         backbone=args.backbone,
         feat_dim=args.feat_dim,
-        freeze_backbone=args.freeze_backbone
+        freeze_backbone=args.freeze_backbone,
+        use_rnd=args.use_rnd,
+        rnd_int_coef=args.rnd_int_coef,
+        rnd_ext_coef=args.rnd_ext_coef,
+        rnd_gamma=args.rnd_gamma,
+        rnd_lr=args.rnd_lr,
+        rnd_weight_decay=args.rnd_weight_decay,
+        rnd_batch_size=args.rnd_batch_size,
+        rnd_epochs=args.rnd_epochs,
     )
 
     trainer = RLTrainer(
