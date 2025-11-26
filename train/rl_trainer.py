@@ -14,7 +14,9 @@ from train.replay_buffer import RolloutBuffer
 from eval.evaluation import evaluate_policy, EvalLogger
 from agents.random_agent import RandomAgent
 from agents.ppo_agent import PPOAgent
+from agents.dreamerv2_agent import DreamerV2Agent
 from configs.ppo_config import PPOConfig
+from configs.dreamerv2_config import DreamerV2Config
 
 
 class RLTrainer:
@@ -28,7 +30,7 @@ class RLTrainer:
         env,
         eval_env,
         agent_type: str,
-        config: PPOConfig,
+        config: PPOConfig | DreamerV2Config,
         device: Optional[str] = None,
     ) -> None:
         self.env = env
@@ -47,6 +49,26 @@ class RLTrainer:
         # RandomAgent has no parameters, so we skip creating an optimizer.
         if agent_type == "random":
             self.optimizer = None
+        elif agent_type == "dreamerv2":
+            if isinstance(self.config.learning_rate, dict):
+                lr_world, lr_actor, lr_value = self.config.learning_rate['world_model'], self.config.learning_rate['actor_model'], self.config.learning_rate['value_model']
+            else:
+                raise ValueError(f"Invalid learning rate type: {type(self.config.learning_rate)}")
+
+            self.optimizer = {
+                'world_model': torch.optim.Adam(
+                    self.agent.get_parameters(self.agent.models_map['world_models']),
+                    lr=lr_world,
+                ),
+                'action_model': torch.optim.Adam(
+                    self.agent.get_parameters(self.agent.models_map['action_models']),
+                    lr=lr_actor,
+                ),
+                'value_model': torch.optim.Adam(
+                    self.agent.get_parameters(self.agent.models_map['value_models']),
+                    lr=lr_value,
+                ),
+            }
         else:
             self.optimizer = torch.optim.Adam(
                 self.agent.parameters(),
@@ -89,6 +111,12 @@ class RLTrainer:
         elif agent_type == "random":
             # Stateless random policy
             return RandomAgent(n_actions=self.n_actions)
+        elif agent_type == "dreamerv2":
+            return DreamerV2Agent(
+                obs_shape=self.obs_shape,
+                n_actions=self.n_actions,
+                config=self.config,
+            )
         else:
             raise ValueError(f"Unknown agent_type: {agent_type}")
 
@@ -120,6 +148,9 @@ class RLTrainer:
         ep_ret = 0.0
         ep_len = 0
 
+        if hasattr(self.agent, "reset"):
+            self.agent.reset()
+
         # Use tqdm to show per-iteration progress over environment steps
         for step in trange(
             self.config.steps_per_iteration,
@@ -129,7 +160,10 @@ class RLTrainer:
             obs_tensor = self._obs_to_tensor(obs)
 
             with torch.no_grad():
-                actions, log_probs, values = self.agent.act(obs_tensor, deterministic=False)
+                actions, log_probs, values = self.agent.act(obs_tensor, deterministic=True)
+
+            if self.agent_type == "dreamerv2":
+                actions = actions.argmax(dim=-1)
 
             action = int(actions.item())
             value = float(values.item())
@@ -156,6 +190,8 @@ class RLTrainer:
                 ep_ret = 0.0
                 ep_len = 0
                 obs = self.env.reset()
+                if hasattr(self.agent, "reset"):
+                    self.agent.reset()
 
         # If final episode did not terminate within this rollout, record it as a partial episode.
         if ep_len > 0:

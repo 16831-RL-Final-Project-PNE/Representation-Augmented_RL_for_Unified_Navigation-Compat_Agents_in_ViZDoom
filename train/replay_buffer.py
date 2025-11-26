@@ -131,4 +131,77 @@ class RolloutBuffer:
                 "advantages": self.advantages[batch_idx].to(self.device),
                 "returns": self.returns[batch_idx].to(self.device),
                 "values": self.values[batch_idx].to(self.device),
+                "dones": self.dones[batch_idx].to(self.device),
+                "rewards": self.rewards[batch_idx].to(self.device),
             }
+
+    def _sample_idx(self, L: int):
+        """
+        Same behavior as TransitionBuffer:
+        - sample any contiguous sequence of length L
+        - circular buffer aware
+        - DOES NOT reject done-crossing sequences
+        """
+        if self.full:
+            max_start = self.buffer_size
+        else:
+            max_start = self.size - L
+
+        start = np.random.randint(0, max_start)
+        idxs = np.arange(start, start + L) % self.buffer_size
+        return idxs
+
+    def _retrieve_sequence_batch(self, idxs, batch_size, L):
+        """
+        idxs: (B, L)
+        return EXACTLY like TransitionBuffer:
+           obs:  (L, B, *obs_shape)
+           act:  (L, B)
+           rew:  (L, B)
+           term: (L, B)
+        """
+        vec = idxs.reshape(-1)
+
+        obs  = self.observations[vec].reshape(batch_size, L, *self.obs_shape)
+        b, l, t, c, h, w = obs.shape
+        obs = obs.view(b, l * t, c, h, w).float() / 255.0
+        act  = self.actions[vec].reshape(batch_size, L)
+        rew  = self.rewards[vec].reshape(batch_size, L)
+        term = self.dones[vec].reshape(batch_size, L)
+
+        # RETURN WITH THE SAME (L,B,...) ORDER AS TransitionBuffer
+        obs  = obs.permute(1, 0, 2, 3, 4, 5) if obs.ndim == 6 else obs.permute(1,0,2,3,4)
+        act  = act.permute(1, 0)
+        rew  = rew.permute(1, 0)
+        term = term.permute(1, 0)
+
+        return obs, act, rew, term
+
+    def sample_sequences(self, seq_len: int, batch_size: int):
+        """
+        EXACT TransitionBuffer behavior:
+        Returns sequences of shape:
+            obs:  (T, B, *obs_shape)
+            act:  (T, B)
+            rew:  (T, B)
+            term: (T, B)
+        """
+        L = seq_len + 1
+
+        # exactly like TransitionBuffer
+        idxs = np.asarray([self._sample_idx(L) for _ in range(batch_size)])
+
+        obs, act, rew, term = self._retrieve_sequence_batch(idxs, batch_size, L)
+
+        # SHIFT like TransitionBuffer
+        obs  = obs[1:]     # (T,B,...)
+        act  = act[:-1]    # (T,B,action_size)
+        rew  = rew[:-1]    # (T,B)
+        term = term[:-1]   # (T,B)
+
+        return {
+            "observations": obs.to(self.device).float(),  
+            "actions":      act.to(self.device),
+            "rewards":      rew.to(self.device),
+            "dones":        term.to(self.device),
+        }

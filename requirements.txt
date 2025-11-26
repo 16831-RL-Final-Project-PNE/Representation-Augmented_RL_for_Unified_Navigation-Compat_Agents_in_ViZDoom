@@ -44,8 +44,6 @@ Markdown==3.9
 MarkupSafe==3.0.2
 matplotlib==3.9.4
 matplotlib-inline==0.1.7
-mkl-random
-mkl-service==2.4.0
 monotonic==1.6
 moviepy==1.0.3
 mpmath

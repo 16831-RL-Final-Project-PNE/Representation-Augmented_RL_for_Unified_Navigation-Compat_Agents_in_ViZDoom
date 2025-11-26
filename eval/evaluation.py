@@ -41,6 +41,8 @@ def evaluate_policy(
 
     for _ in range(num_episodes):
         obs = env.reset()
+        if hasattr(agent, 'reset'):
+            agent.reset()
         done = False
         ep_ret = 0.0
         ep_len = 0

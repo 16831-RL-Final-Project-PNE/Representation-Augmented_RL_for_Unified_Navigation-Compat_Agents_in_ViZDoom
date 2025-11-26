@@ -113,7 +113,7 @@ class PPOAgent(nn.Module):
     def evaluate_actions(self, obs: torch.Tensor, actions: torch.Tensor):
         """
         Used during PPO update to recompute log_probs, entropy, and values
-        under the current policy parameters.
+        under the current policy parameters.s
         """
         logits, values = self.ac(obs)
         dist = Categorical(logits=logits)
