@@ -136,6 +136,12 @@ def main():
     parser.add_argument("--rnd_epochs", type=int, default=1,
                         help="Number of passes over RND data per rollout.")
 
+    parser.add_argument(
+        "--rnd_int_decay",
+        action="store_true",
+        help="If set, linearly decay rnd_int_coef from its initial value to 0 over training.",
+    )
+
     args = parser.parse_args()
 
     # ----- Create needed directories -----
@@ -200,6 +206,7 @@ def main():
         rnd_weight_decay=args.rnd_weight_decay,
         rnd_batch_size=args.rnd_batch_size,
         rnd_epochs=args.rnd_epochs,
+        rnd_int_decay=args.rnd_int_decay,
     )
 
     trainer = RLTrainer(

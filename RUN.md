@@ -87,16 +87,17 @@ CUDA_VISIBLE_DEVICES=5 python -m scripts.train_ppo_basic \
   --batch_size 128 \
   --learning_rate 2.5e-4 \
   --clip_coef 0.1 \
-  --value_coef 0.5 \
+  --value_coef 0.25 \
   --entropy_coef 0.01 \
   --use_rnd \
-  --rnd_int_coef 1.0 \
+  --rnd_int_coef 0.4 \
   --rnd_ext_coef 1.0 \
   --rnd_gamma 0.99 \
   --rnd_lr 1e-5 \
   --rnd_weight_decay 1e-4 \
   --rnd_batch_size 128 \
   --rnd_epochs 1 \
+  --rnd_int_decay \
   --eval_log_dir ./logs \
   --eval_log_name basic_ppo_rnd_eval.npz \
   --tb_log_dir ./logs/tb_basic_ppo_rnd \
@@ -131,19 +132,20 @@ CUDA_VISIBLE_DEVICES=7 python -m scripts.train_ppo_basic \
   --feat_dim 256 \
   --total_iterations 200 \
   --steps_per_iteration 16384 \
-  --batch_size 32 \
+  --batch_size 256 \
   --learning_rate 3e-4 \
   --clip_coef 0.2 \
   --value_coef 0.5 \
   --entropy_coef 0.01 \
   --use_rnd \
-  --rnd_int_coef 0.5 \
+  --rnd_int_coef 0.3 \
   --rnd_ext_coef 1.0 \
   --rnd_gamma 0.99 \
-  --rnd_lr 1e-4 \
+  --rnd_lr 1e-5 \
   --rnd_weight_decay 1e-4 \
   --rnd_batch_size 256 \
   --rnd_epochs 1 \
+  --rnd_int_decay \
   --eval_log_dir ./logs \
   --eval_log_name mwh_ppo_rnd_eval.npz \
   --tb_log_dir ./logs/tb_mwh_ppo_rnd \
@@ -181,19 +183,20 @@ CUDA_VISIBLE_DEVICES=0 python -m scripts.train_ppo_basic \
   --feat_dim 256 \
   --total_iterations 200 \
   --steps_per_iteration 8192 \
-  --batch_size 32 \
+  --batch_size 128 \
   --learning_rate 1e-4 \
   --clip_coef 0.1 \
-  --value_coef 0.5 \
+  --value_coef 0.25 \
   --entropy_coef 0.01 \
   --use_rnd \
-  --rnd_int_coef 1.0 \
+  --rnd_int_coef 0.3 \
   --rnd_ext_coef 1.0 \
   --rnd_gamma 0.99 \
   --rnd_lr 1e-5 \
   --rnd_weight_decay 1e-4 \
-  --rnd_batch_size 256 \
+  --rnd_batch_size 128 \
   --rnd_epochs 1 \
+  --rnd_int_decay \
   --eval_log_dir ./logs \
   --eval_log_name basic_ppo_dinov3_rnd_eval.npz \
   --tb_log_dir ./logs/tb_basic_ppo_dinov3_rnd \
@@ -231,19 +234,20 @@ CUDA_VISIBLE_DEVICES=6 python -m scripts.train_ppo_basic \
   --feat_dim 256 \
   --total_iterations 200 \
   --steps_per_iteration 16384 \
-  --batch_size 32 \
+  --batch_size 256 \
   --learning_rate 3e-4 \
   --clip_coef 0.2 \
   --value_coef 0.5 \
   --entropy_coef 0.01 \
   --use_rnd \
-  --rnd_int_coef 0.4 \
+  --rnd_int_coef 0.2 \
   --rnd_ext_coef 1.0 \
   --rnd_gamma 0.99 \
-  --rnd_lr 1e-4 \
+  --rnd_lr 1e-5 \
   --rnd_weight_decay 1e-4 \
   --rnd_batch_size 256 \
   --rnd_epochs 1 \
+  --rnd_int_decay \
   --eval_log_dir ./logs \
   --eval_log_name mwh_ppo_dinov3_rnd_eval.npz \
   --tb_log_dir ./logs/tb_mwh_ppo_dinov3_rnd \
@@ -280,19 +284,20 @@ CUDA_VISIBLE_DEVICES=2 python -m scripts.train_ppo_basic \
   --feat_dim 256 \
   --total_iterations 200 \
   --steps_per_iteration 8192 \
-  --batch_size 64 \
+  --batch_size 128 \
   --learning_rate 1e-4 \
   --clip_coef 0.1 \
-  --value_coef 0.5 \
+  --value_coef 0.25 \
   --entropy_coef 0.01 \
   --use_rnd \
-  --rnd_int_coef 1.0 \
+  --rnd_int_coef 0.3 \
   --rnd_ext_coef 1.0 \
   --rnd_gamma 0.99 \
   --rnd_lr 1e-5 \
   --rnd_weight_decay 1e-4 \
   --rnd_batch_size 128 \
   --rnd_epochs 1 \
+  --rnd_int_decay \
   --eval_log_dir ./logs \
   --eval_log_name basic_ppo_dinov2_rnd_eval.npz \
   --tb_log_dir ./logs/tb_basic_ppo_dinov2_rnd \
@@ -331,25 +336,26 @@ CUDA_VISIBLE_DEVICES=2 python -m scripts.train_ppo_basic \
   --feat_dim 256 \
   --total_iterations 200 \
   --steps_per_iteration 16384 \
-  --batch_size 16 \
+  --batch_size 256 \
   --learning_rate 3e-4 \
   --clip_coef 0.2 \
   --value_coef 0.5 \
   --entropy_coef 0.01 \
   --use_rnd \
-  --rnd_int_coef 0.4 \
+  --rnd_int_coef 0.3 \
   --rnd_ext_coef 1.0 \
   --rnd_gamma 0.99 \
-  --rnd_lr 1e-4 \
+  --rnd_lr 1e-5 \
   --rnd_weight_decay 1e-4 \
-  --rnd_batch_size 128 \
+  --rnd_batch_size 256 \
   --rnd_epochs 1 \
+  --rnd_int_decay \
   --eval_log_dir ./logs \
   --eval_log_name mwh_ppo_dinov2_rnd_eval.npz \
   --tb_log_dir ./logs/tb_mwh_ppo_dinov2_rnd \
   --checkpoint_dir /data/patrick/16831RL/checkpoints \
   --checkpoint_name mwh_ppo_dinov2_rnd \
-  --save_every 60
+  --save_every 80
 
 
 # 2 use unified evaluator to plot average eval return vs interations
