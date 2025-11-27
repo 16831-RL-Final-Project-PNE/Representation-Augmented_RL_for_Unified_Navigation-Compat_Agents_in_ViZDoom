@@ -59,3 +59,6 @@ class PPOConfig:
     # RND training schedule per rollout
     rnd_batch_size: int = 256
     rnd_epochs: int = 1
+
+    # Whether to linearly decay rnd_int_coef from its initial value to 0
+    rnd_int_decay: bool = False

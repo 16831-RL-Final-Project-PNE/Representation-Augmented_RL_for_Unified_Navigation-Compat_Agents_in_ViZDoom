@@ -88,6 +88,10 @@ class RLTrainer:
         # have RND fields.
         self.use_rnd = bool(getattr(self.config, "use_rnd", False)) and (self.agent_type == "ppo")
 
+        # Store initial intrinsic coefficient & whether to decay it
+        self.rnd_int_coef_initial: float = float(getattr(self.config, "rnd_int_coef", 0.0))
+        self.rnd_int_decay: bool = bool(getattr(self.config, "rnd_int_decay", False))
+
         if self.use_rnd:
             from exploration.rnd_model import RNDModel  # imported only when needed
 
@@ -420,6 +424,16 @@ class RLTrainer:
         """
         for iteration in range(self.config.total_iterations):
             print(f"\n\n********** Iteration {iteration} ************")
+
+            # if RND is set, let rnd_int_coef decay to 0 through iterations
+            if self.use_rnd and self.rnd_int_decay:
+                # frac changes from 0 to 1
+                frac = iteration / max(self.config.total_iterations - 1, 1)
+                # linear decay：iteration=0, initial; last iteration,  0
+                current_coef = self.rnd_int_coef_initial * (1.0 - frac)
+                self.config.rnd_int_coef = current_coef
+                # debug
+                # print(f"[RND] iter={iteration}, rnd_int_coef={current_coef:.4f}")
 
             # 1) collect rollout + train metrics (and possibly RND metrics)
             rollout_info = self.collect_rollout()
