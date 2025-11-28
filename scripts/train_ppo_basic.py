@@ -72,9 +72,9 @@ def main():
     parser.add_argument(
         "--eval_deterministic",
         action="store_true",
-        help="Use deterministic policy during eval if set.",
+        default=True,
+        help="Use deterministic policy during eval (default: True).",
     )
-
     # ----- Checkpoint settings -----
     parser.add_argument(
         "--checkpoint_dir",

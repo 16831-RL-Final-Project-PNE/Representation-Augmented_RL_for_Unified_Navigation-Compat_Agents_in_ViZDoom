@@ -68,6 +68,7 @@ CUDA_VISIBLE_DEVICES=5 python -m scripts.train_ppo_basic \
   --learning_rate 1e-4 \
   --clip_coef 0.1 \
   --value_coef 0.25 \
+  --eval_deterministic \
   --eval_episodes 10 \
   --eval_interval 1 \
   --eval_log_dir ./logs \
@@ -85,12 +86,12 @@ CUDA_VISIBLE_DEVICES=5 python -m scripts.train_ppo_basic \
   --total_iterations 200 \
   --steps_per_iteration 8192 \
   --batch_size 128 \
-  --learning_rate 2.5e-4 \
+  --learning_rate 1e-4 \
   --clip_coef 0.1 \
   --value_coef 0.25 \
   --entropy_coef 0.01 \
   --use_rnd \
-  --rnd_int_coef 0.4 \
+  --rnd_int_coef 0.2 \
   --rnd_ext_coef 1.0 \
   --rnd_gamma 0.99 \
   --rnd_lr 1e-5 \
@@ -328,7 +329,7 @@ CUDA_VISIBLE_DEVICES=1 python -m scripts.train_ppo_basic \
   --freeze_backbone
 
 # attempting
-CUDA_VISIBLE_DEVICES=2 python -m scripts.train_ppo_basic \
+CUDA_VISIBLE_DEVICES=0 python -m scripts.train_ppo_basic \
   --scenario my_way_home \
   --action_space no_shoot \
   --backbone dinov2 \
@@ -350,6 +351,7 @@ CUDA_VISIBLE_DEVICES=2 python -m scripts.train_ppo_basic \
   --rnd_batch_size 256 \
   --rnd_epochs 1 \
   --rnd_int_decay \
+  --eval_deterministic \
   --eval_log_dir ./logs \
   --eval_log_name mwh_ppo_dinov2_rnd_eval.npz \
   --tb_log_dir ./logs/tb_mwh_ppo_dinov2_rnd \
@@ -359,6 +361,21 @@ CUDA_VISIBLE_DEVICES=2 python -m scripts.train_ppo_basic \
 
 
 # 2 use unified evaluator to plot average eval return vs interations
+
+# load checkpoint, use deterministic evaluation to run episodes again and record rewards
+python -m scripts.eval_ppo_checkpoint \
+  --scenario basic \
+  --action_space usual \
+  --backbone cnn \
+  --checkpoint /data/patrick/16831RL/checkpoints/basic_ppo_iter199.pt \
+  --eval_log_path ./logs/basic_ppo_eval_det.npz \
+  --episodes 50
+
+python -m eval.evaluation \
+  --log_path ./logs/basic_ppo_eval_det.npz \
+  --out ./plots/basic_ppo_eval_det.png \
+  --annotate_last_only
+
 python -m eval.evaluation \
   --log_path ./logs/basic_ppo_eval.npz \
   --out ./plots/basic_ppo_eval.png \
