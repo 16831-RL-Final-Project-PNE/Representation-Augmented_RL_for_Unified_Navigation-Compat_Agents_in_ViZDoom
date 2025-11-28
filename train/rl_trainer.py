@@ -18,6 +18,10 @@ from agents.dreamerv2_agent import DreamerV2Agent
 from configs.ppo_config import PPOConfig
 from configs.dreamerv2_config import DreamerV2Config
 
+import imageio
+from pathlib import Path
+
+
 
 class RLTrainer:
     """
@@ -329,9 +333,14 @@ class RLTrainer:
         filename = f"{self.config.checkpoint_name}_{tag}.pt"
         path = os.path.join(self.config.checkpoint_dir, filename)
 
+        if self.agent_type == "dreamerv2":
+            agent_state_dict = self.agent.get_state_dict()
+        else:
+            agent_state_dict = self.agent.state_dict()
+
         torch.save(
             {
-                "agent_state_dict": self.agent.state_dict(),
+                "agent_state_dict": agent_state_dict,
                 "agent_type": self.agent_type,
                 "obs_shape": self.obs_shape,
                 "n_actions": self.n_actions,
@@ -372,6 +381,10 @@ class RLTrainer:
                 agent_type=self.agent_type,
             )
 
+            if iteration % 20 == 0:  # cada 20 iteraciones
+                gif_path = os.path.join(self.config.log_dir, f"episode_{iteration}.gif")
+                self.save_episode_gif(self.eval_env, self.agent, gif_path)
+
             # 4) aggregate + log
             self._log_iteration(
                 iteration=iteration,
@@ -397,3 +410,39 @@ class RLTrainer:
         self.eval_logger.save(self.config.eval_log_path)
         print(f"Saved eval log to {self.config.eval_log_path}")
         self.writer.close()
+
+    def save_episode_gif(self, env, agent, path: str, max_frames: int = 2000, deterministic: bool = True):
+        """
+        Run one full episode in `env` using `agent` and save it as a GIF to `path`.
+        The environment must return RGB frames as observations.
+        """
+
+        frames = []
+        obs = env.reset()
+
+        if hasattr(agent, "reset"):
+            agent.reset()
+
+        for _ in range(max_frames):
+            # Store frame (assumes obs is RGB shape (H,W,3))
+            frames.append(obs)
+
+            obs_tensor = self._obs_to_tensor(obs).to(self.device)
+
+            with torch.no_grad():
+                actions, _, _ = agent.act(obs_tensor, deterministic=deterministic)
+                if self.agent_type == "dreamerv2":
+                    actions = actions.argmax(dim=-1)
+
+            action = int(actions.item())
+            obs, reward, done, _info = env.step(action)
+
+            if done:
+                frames.append(obs)
+                break
+
+        # Save GIF
+        Path(Path(path).parent).mkdir(parents=True, exist_ok=True)
+        imageio.mimsave(path, frames, fps=30)
+        print(f"Saved episode GIF to {path}")
+

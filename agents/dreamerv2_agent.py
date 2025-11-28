@@ -302,7 +302,6 @@ class DreamerV2Agent(nn.Module):
         return critic_loss
 
     def actor_loss(self, imag_reward, imag_value, discount_arr, imag_log_prob, policy_entropy):
-        # TODO Check if here we can use advantage data directly
         def compute_return(
                         reward: torch.Tensor,
                         value: torch.Tensor,
@@ -430,23 +429,13 @@ class DreamerV2Agent(nn.Module):
                 grad_norm_model = torch.nn.utils.clip_grad_norm_(self.get_parameters(self.models_map['world_models']), self.config.grad_clip_norm)
                 optimizer['world_model'].step()
 
-                # Antes de actualizar
-                before = {}
-                for name, p in self.value_model.named_parameters():
-                    before[name] = p.clone().detach()
-
                 actor_loss, value_loss, target_info = self.actor_critic_loss(loss_dict['posterior'])
-
 
                 optimizer['action_model'].zero_grad()
                 optimizer['value_model'].zero_grad()
 
                 actor_loss.backward()
                 value_loss.backward()
-                # Después del update
-                for name, p in self.value_model.named_parameters():
-                    diff = (p - before[name]).abs().mean().item()
-                    print(f"{name}: Δ = {diff}")
 
                 grad_norm_actor = torch.nn.utils.clip_grad_norm_(self.get_parameters(self.models_map['action_models']), self.config.grad_clip_norm)
                 grad_norm_value = torch.nn.utils.clip_grad_norm_(self.get_parameters(self.models_map['value_models']), self.config.grad_clip_norm)
@@ -461,6 +450,9 @@ class DreamerV2Agent(nn.Module):
                 policy_losses.append(actor_loss.item())
                 value_losses.append(value_loss.item())
                 entropy_losses.append(prior_ent.item())
+        
+        # Soft update target networks
+        self.update_target()
 
         logs = {
             "Loss_Policy": float(np.mean(policy_losses)) if policy_losses else 0.0,
@@ -468,3 +460,30 @@ class DreamerV2Agent(nn.Module):
             "Loss_Entropy": float(np.mean(entropy_losses)) if entropy_losses else 0.0,
         }
         return logs
+
+
+    def update_target(self):
+        mix = self.config.slow_target_fraction if self.config.use_slow_target else 1
+        for param, target_param in zip(self.value_model.parameters(), self.target_value_model.parameters()):
+            target_param.data.copy_(mix * param.data + (1 - mix) * target_param.data)
+    
+    def get_state_dict(self):
+        return {
+            "RSSM": self.RSSM.state_dict(),
+            "ObsEncoder": self.ObsEncoder.state_dict(),
+            "ObsDecoder": self.ObsDecoder.state_dict(),
+            "RewardDecoder": self.RewardDecoder.state_dict(),
+            "ActionModel": self.ActionModel.state_dict(),
+            "ValueModel": self.ValueModel.state_dict(),
+            "DiscountModel": self.DiscountModel.state_dict(),
+        }
+
+    def load_state_dict(self, state_dict):
+        self.RSSM.load_state_dict(state_dict["RSSM"])
+        self.ObsEncoder.load_state_dict(state_dict["ObsEncoder"])
+        self.ObsDecoder.load_state_dict(state_dict["ObsDecoder"])
+        self.RewardDecoder.load_state_dict(state_dict["RewardDecoder"])
+        self.ActionModel.load_state_dict(state_dict["ActionModel"])
+        self.ValueModel.load_state_dict(state_dict["ValueModel"])
+        self.DiscountModel.load_state_dict(state_dict["DiscountModel"])
+    

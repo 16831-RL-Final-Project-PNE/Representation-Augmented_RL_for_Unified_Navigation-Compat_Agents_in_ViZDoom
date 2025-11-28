@@ -1,7 +1,7 @@
 python -m scripts.train_dreamerv2 \
   --scenario basic \
   --total_iterations 200 \
-  --steps_per_iteration 128 \
+  --steps_per_iteration 2048 \
   --use_dino_v3 \
   --tb_log_dir ./logs/tb_dreamerv2_basic \
   --eval_log_dir ./logs \

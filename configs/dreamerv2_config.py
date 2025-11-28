@@ -36,6 +36,9 @@ class DreamerV2Config:
     dino_v3_model_name: str = "facebook/dinov3-vits16-pretrain-lvd1689m"
     dino_v3_freeze_backbone: bool = True
 
+    use_slow_target: bool = True
+    slow_target_fraction: float = 0.05
+
     rssm_deter_size: int = 200
     rssm_category_size: int = 20
     rssm_class_size: int = 20
