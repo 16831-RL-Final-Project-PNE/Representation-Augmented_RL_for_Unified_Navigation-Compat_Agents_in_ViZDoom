@@ -59,7 +59,7 @@ python -m scripts.eval_random_play \
 
 # PPO Agent
 # 1 run ppo agent training
-CUDA_VISIBLE_DEVICES=5 python -m scripts.train_ppo_basic \
+CUDA_VISIBLE_DEVICES=0 python -m scripts.train_ppo_basic \
   --scenario basic \
   --action_space usual \
   --total_iterations 200 \
@@ -67,7 +67,7 @@ CUDA_VISIBLE_DEVICES=5 python -m scripts.train_ppo_basic \
   --batch_size 128 \
   --learning_rate 1e-4 \
   --clip_coef 0.1 \
-  --value_coef 0.1 \
+  --value_coef 0.25 \
   --entropy_coef 0.01 \
   --eval_deterministic \
   --eval_episodes 10 \
@@ -127,7 +127,7 @@ python -m scripts.train_ppo_basic \
   --save_every 0
 
 # attempting
-CUDA_VISIBLE_DEVICES=7 python -m scripts.train_ppo_basic \
+CUDA_VISIBLE_DEVICES=0 python -m scripts.train_ppo_basic \
   --scenario my_way_home \
   --action_space no_shoot \
   --backbone cnn \
@@ -137,7 +137,7 @@ CUDA_VISIBLE_DEVICES=7 python -m scripts.train_ppo_basic \
   --batch_size 256 \
   --learning_rate 3e-4 \
   --clip_coef 0.2 \
-  --value_coef 0.5 \
+  --value_coef 0.25 \
   --entropy_coef 0.01 \
   --use_rnd \
   --rnd_int_coef 0.3 \
@@ -157,7 +157,7 @@ CUDA_VISIBLE_DEVICES=7 python -m scripts.train_ppo_basic \
   --save_every 80
 
 # need modified filename
-CUDA_VISIBLE_DEVICES=7 python -m scripts.train_ppo_basic \
+CUDA_VISIBLE_DEVICES=0 python -m scripts.train_ppo_basic \
   --scenario basic \
   --action_space usual \
   --total_iterations 200 \
@@ -178,7 +178,7 @@ CUDA_VISIBLE_DEVICES=7 python -m scripts.train_ppo_basic \
   --freeze_backbone
 
 # already run
-CUDA_VISIBLE_DEVICES=0 python -m scripts.train_ppo_basic \
+CUDA_VISIBLE_DEVICES=5 python -m scripts.train_ppo_basic \
   --scenario basic \
   --action_space usual \
   --backbone dinov3 \
@@ -230,7 +230,7 @@ python -m scripts.train_ppo_basic \
   --freeze_backbone
 
 # attempting
-CUDA_VISIBLE_DEVICES=6 python -m scripts.train_ppo_basic \
+CUDA_VISIBLE_DEVICES=0 python -m scripts.train_ppo_basic \
   --scenario my_way_home \
   --action_space no_shoot \
   --backbone dinov3 \
@@ -241,7 +241,7 @@ CUDA_VISIBLE_DEVICES=6 python -m scripts.train_ppo_basic \
   --batch_size 256 \
   --learning_rate 3e-4 \
   --clip_coef 0.2 \
-  --value_coef 0.5 \
+  --value_coef 0.25 \
   --entropy_coef 0.01 \
   --use_rnd \
   --rnd_int_coef 0.2 \
@@ -333,7 +333,7 @@ CUDA_VISIBLE_DEVICES=1 python -m scripts.train_ppo_basic \
   --freeze_backbone
 
 # attempting
-CUDA_VISIBLE_DEVICES=0 python -m scripts.train_ppo_basic \
+CUDA_VISIBLE_DEVICES=7 python -m scripts.train_ppo_basic \
   --scenario my_way_home \
   --action_space no_shoot \
   --backbone dinov2 \
@@ -344,7 +344,7 @@ CUDA_VISIBLE_DEVICES=0 python -m scripts.train_ppo_basic \
   --batch_size 256 \
   --learning_rate 3e-4 \
   --clip_coef 0.2 \
-  --value_coef 0.5 \
+  --value_coef 0.25 \
   --entropy_coef 0.01 \
   --use_rnd \
   --rnd_int_coef 0.3 \

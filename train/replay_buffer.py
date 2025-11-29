@@ -87,11 +87,11 @@ class RolloutBuffer:
 
         for t in reversed(range(self.size)):
             if t == self.size - 1:
-                next_non_terminal = 1.0 - self.dones[t]
                 next_value = last_value_t
             else:
-                next_non_terminal = 1.0 - self.dones[t + 1]
                 next_value = self.values[t + 1]
+
+            next_non_terminal = 1.0 - self.dones[t]
 
             delta = (
                 self.rewards[t]
