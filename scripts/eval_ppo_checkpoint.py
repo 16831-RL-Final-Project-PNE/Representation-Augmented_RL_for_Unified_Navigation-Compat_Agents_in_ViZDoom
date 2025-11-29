@@ -30,7 +30,7 @@ import torch
 
 from env.doom_env import DoomEnv
 from agents.ppo_agent import PPOAgent
-from eval.evaluation import EvalLogger
+from eval.evaluation import EvalLogger, stacked_obs_to_tensor
 
 
 def make_env(args: argparse.Namespace) -> DoomEnv:
@@ -65,10 +65,12 @@ def infer_obs_shape(env: DoomEnv) -> tuple[int, int, int, int]:
 
 def get_n_actions(env: DoomEnv) -> int:
     """Get number of discrete actions from env."""
+    if hasattr(env, "action_space_n"):
+        return int(env.action_space_n)  # type: ignore[attr-defined]
+    if hasattr(env, "action_space"):
+        return int(env.action_space)
     if hasattr(env, "n_actions"):
         return int(env.n_actions)
-    if hasattr(env, "action_space"):
-        return int(env.action_space.n)  # type: ignore[attr-defined]
     raise RuntimeError("Cannot infer number of actions from env.")
 
 
@@ -92,8 +94,14 @@ def load_agent_from_checkpoint(
         freeze_backbone=freeze_backbone,
     ).to(device)
 
+    # PyTorch 2.6: default weights_only=True will fail because ckpt contains PPOConfig.
+    # This checkpoint is from our own code, so it's safe to disable weights_only.
     print(f"[INFO] Loading checkpoint from: {ckpt_path}")
-    ckpt: Dict[str, Any] = torch.load(ckpt_path, map_location=device)
+    ckpt: Dict[str, Any] = torch.load(
+        ckpt_path,
+        map_location=device,
+        weights_only=False,  # <--- allow to load self-defined class ppo_config.py
+    )
 
     # Heuristics: support several common formats
     if isinstance(ckpt, dict):
@@ -137,14 +145,9 @@ def run_eval(
 
         while not done:
             # obs: (C,H,W) numpy -> (1,C,H,W) tensor
-            if isinstance(obs, np.ndarray):
-                obs_t = torch.from_numpy(obs).to(device=device, dtype=torch.float32)
-            else:
-                # just in case env already returns tensor
-                obs_t = obs.to(device)
-            if obs_t.ndim == 3:
-                obs_t = obs_t.unsqueeze(0)
-
+            # obs: (T,3,H,W) numpy -> (1, 3T, H, W) tensor (same as training)
+            obs_t = stacked_obs_to_tensor(obs, device)
+            
             with torch.no_grad():
                 actions, logp, value = agent.act(obs_t, deterministic=deterministic)
             action = int(actions[0].item())
@@ -176,7 +179,9 @@ def save_eval_log(
     Save evaluation result in the SAME format as EvalLogger.save(),
     so that eval/evaluation.py:plot_eval_curve can read it directly.
     """
-    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    out_dir = os.path.dirname(out_path)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
     mean_ret = float(returns.mean())
     std_ret = float(returns.std())
     print(f"[INFO] Mean return over {len(returns)} episodes: {mean_ret:.2f} ± {std_ret:.2f}")
