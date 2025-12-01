@@ -1,4 +1,4 @@
-# agents/ppo_agent.py
+
 from typing import Tuple, Dict, abstractmethod, Iterable
 import numpy as np
 from tqdm.auto import trange
@@ -12,6 +12,53 @@ from .nn_dreamerv2_models import *
 from configs.dreamerv2_config import DreamerV2Config
 from .rssm_model import *
 from .nn_actor_critic_dinov3 import DinoV3Encoder
+
+
+import imageio
+import numpy as np
+import torch
+
+def save_obs_dist_gif(obs_dist, filename="dreamer_recon.gif", fps=6, batch_idx=0):
+    """
+    Guarda un GIF sampleado desde obs_dist sin consumir memoria GPU ni RAM.
+    Procesa frame por frame en CPU.
+    """
+
+    # Asegurar dimensión correcta
+    if hasattr(obs_dist, "mean"):
+        # No extraigas mean completa → extraerás frame-by-frame
+        pass
+    else:
+        raise ValueError("obs_dist debe ser distribución Normal.")
+
+    # Dimensiones
+    T = obs_dist.mean.shape[0]   # solo mira shape, no extraigas los valores
+    C = obs_dist.mean.shape[2]
+    H = obs_dist.mean.shape[3]
+    W = obs_dist.mean.shape[4]
+
+    writer = imageio.get_writer(filename, fps=fps)
+
+    for t in range(T):
+        # ---- sampleo de UN SOLO FRAME ----
+        frame_mean = obs_dist.mean[t, batch_idx]  # (C,H,W) en GPU
+        frame = frame_mean.detach().cpu().clamp(0,1).numpy()  # copiar SOLO este frame
+
+        # convertir a uint8
+        frame = (frame * 255).astype(np.uint8)
+
+        # CHW → HWC
+        if frame.shape[0] in [1,3]:
+            frame = np.transpose(frame, (1,2,0))
+
+        # monocanal → RGB
+        if frame.shape[-1] == 1:
+            frame = np.repeat(frame, 3, axis=-1)
+
+        writer.append_data(frame)
+
+    writer.close()
+    print(f"[GIF] Guardado en {filename}")
 
 
 class DiscreteActionModel(nn.Module):
@@ -30,11 +77,7 @@ class DiscreteActionModel(nn.Module):
 
         self.layers = config.actor_layers
         self.node_size = config.actor_node_size
-        self.train_noise = config.actor_train_noise
-        self.eval_noise = config.actor_eval_noise
-        self.expl_min = config.actor_expl_min
-        self.expl_decay = config.actor_expl_decay
-        self.expl_type = config.actor_expl_type
+
         self.model = self.build_model()
 
     def build_model(self):
@@ -55,26 +98,6 @@ class DiscreteActionModel(nn.Module):
     def get_action_dist(self, model_state):
         logits = self.model(model_state)
         return td.OneHotCategorical(logits=logits)
-            
-    def add_exploration(self, action: torch.Tensor, itr: int, mode='train'):
-        if mode == 'train':
-            expl_amount = self.train_noise
-            expl_amount = expl_amount - itr/self.expl_decay
-            expl_amount = max(self.expl_min, expl_amount)
-        elif mode == 'eval':
-            expl_amount = self.eval_noise
-        else:
-            raise NotImplementedError
-            
-        if self.expl_type == 'epsilon_greedy':
-            if np.random.uniform(0, 1) < expl_amount:
-                index = torch.randint(0, self.action_size, action.shape[:-1], device=action.device)
-                action = torch.zeros_like(action)
-                action[:, index] = 1
-            return action
-        # TODO: In case we want to include RND
-
-        raise NotImplementedError
 
 class FreezeParameters:
     def __init__(self, modules: Iterable[nn.Module]):
@@ -181,7 +204,7 @@ class DreamerV2Agent(nn.Module):
 
     # --- core API used during rollout / evaluation ---
     @torch.no_grad()
-    def act(self, obs: torch.Tensor, deterministic: bool = True):
+    def act(self, obs: torch.Tensor, deterministic: bool = True, itr: int = None, ):
         """
         obs: (B, C, H, W)
         Returns: actions, log_probs, values (all tensors with batch dimension)
@@ -198,6 +221,7 @@ class DreamerV2Agent(nn.Module):
             idx = torch.argmax(action_dist.probs, dim=-1).long()
         else:
             idx = td.Categorical(probs=action_dist.probs).sample().long()
+
         # log_pi(a_t|m_t)
         actions = F.one_hot(idx, num_classes=self.action_size).float()
         log_probs = action_dist.log_prob(actions)
@@ -227,8 +251,18 @@ class DreamerV2Agent(nn.Module):
         return value
 
     def _obs_loss(self, obs_dist, obs):
-        # L_obs = E[log p(o_hat_t | o_t)]
-        obs_loss = -torch.mean(obs_dist.log_prob(obs))
+        # obs_dist.log_prob(obs) has shape (B, T) or (B,)
+        # and is SUM over all pixel dims (C,H,W)
+
+        log_prob = obs_dist.log_prob(obs)  # sum over pixels
+        num_pix = np.prod(obs.shape[-3:])  # C*H*W
+
+        # Normalize per pixel
+        log_prob_per_pixel = log_prob / num_pix
+
+        # We want mean over batch/time
+        obs_loss = -log_prob_per_pixel.mean()
+
         return obs_loss
 
     def _discount_loss(self, discount_dist, nonterms):
@@ -246,6 +280,10 @@ class DreamerV2Agent(nn.Module):
         # L_kl = E[log p(z_hat_t | z_t) - log q(z_hat_t | z_t,e)]
         prior_dist = self.rssm.get_dist(prior)
         post_dist = self.rssm.get_dist(posterior)
+
+        raw_kl = torch.mean(
+            torch.distributions.kl.kl_divergence(post_dist, prior_dist)
+        )
         if self.config.kl_use_kl_balance:
             alpha = self.config.kl_balance_scale
             kl_lhs = torch.mean(torch.distributions.kl.kl_divergence(self.rssm.get_dist(self.rssm.rssm_detach(posterior)), prior_dist))
@@ -261,24 +299,33 @@ class DreamerV2Agent(nn.Module):
             if self.config.kl_use_free_nats:
                 free_nats = self.config.kl_free_nats
                 kl_loss = torch.max(kl_loss, kl_loss.new_full(kl_loss.size(), free_nats))
-        return prior_dist, post_dist, kl_loss
+        return prior_dist, post_dist, kl_loss, raw_kl
 
     def representation_loss(self, obs, actions, rewards, nonterms):
-        embed = self.obs_encoder(obs)                                         #t to t+seq_len   
+        # next_obs, actions, rewards, nonterms
+        # next_obs t+1 to t+seq_len+1
+        # actions t to t+seq_len
+        # rewards t to t+seq_len
+        # nonterms t to t+seq_len
+        
+        embed = self.obs_encoder(obs)                                         #t+1 to t+seq_len+1   
         prev_rssm_state = self.rssm._init_rssm_state(self.config.batch_size)
         prior, posterior = self.rssm.rollout_observation(self.config.rssm_seq_len, embed, actions, nonterms, prev_rssm_state)
-        post_model_state = self.rssm.get_model_state(posterior)                #t to t+seq_len   
-        obs_dist = self.obs_decoder(post_model_state[:-1])                     #t to t+seq_len-1  
-        reward_dist = self.reward_decoder(post_model_state[:-1])               #t to t+seq_len-1  
-        discount_dist = self.discount_model(post_model_state[:-1])                #t to t+seq_len-1   
+        post_model_state = self.rssm.get_model_state(posterior)                #t+1 to t+seq_len+1   
+        obs_dist = self.obs_decoder(post_model_state[:-1])                     #t+1 to t+seq_len
+        save_obs_dist_gif(obs_dist, filename="reconstruction.gif", fps=6)
+        print("Passed this part")
+        reward_dist = self.reward_decoder(post_model_state[:-1])               #t+1 to t+seq_len   
+        discount_dist = self.discount_model(post_model_state[:-1])             #t+1 to t+seq_len   
         
-        obs_loss = self._obs_loss(obs_dist, obs[:-1])
-        reward_loss = self._reward_loss(reward_dist, rewards[1:])
-        discount_loss = self._discount_loss(discount_dist, nonterms[1:])
-        prior_dist, post_dist, kl_loss = self._kl_loss(prior, posterior)
+        obs_loss = self._obs_loss(obs_dist, obs[:-1])                           # t+1 to t+seq_len
+        reward_loss = self._reward_loss(reward_dist, rewards[1:])               # t+1 to t+seq_len
+        discount_loss = self._discount_loss(discount_dist, nonterms[1:])        # t+1 to t+seq_len
+        prior_dist, post_dist, kl_loss, raw_kl = self._kl_loss(prior, posterior) # t+1 to t+seq_len
 
         # world model loss
-        world_model_loss = self.config.kl_loss_scale * kl_loss + reward_loss + obs_loss + self.config.discount_loss_scale*discount_loss
+        world_model_loss = self.config.kl_loss_scale * kl_loss + self.config.reward_loss_scale*reward_loss + self.config.obs_loss_scale*obs_loss + self.config.discount_loss_scale*discount_loss
+        
         return {
             "world_model_loss": world_model_loss,
             "kl_loss": kl_loss,
@@ -288,8 +335,8 @@ class DreamerV2Agent(nn.Module):
             "prior_dist": prior_dist,
             "post_dist": post_dist,
             "posterior": posterior,
+            "raw_kl_loss": raw_kl,
         }
-        #model_loss, kl_loss, obs_loss, reward_loss, pcont_loss, prior_dist, post_dist, posterior
 
     def critic_loss(self, imag_model_states, discount, lambda_returns):
         with torch.no_grad():
@@ -302,34 +349,35 @@ class DreamerV2Agent(nn.Module):
         return critic_loss
 
     def actor_loss(self, imag_reward, imag_value, discount_arr, imag_log_prob, policy_entropy):
-        def compute_return(
-                        reward: torch.Tensor,
-                        value: torch.Tensor,
-                        discount: torch.Tensor,
-                        bootstrap: torch.Tensor,
-                        lambda_: float = 0.95
-                    ):
+        # imag_reward t+1 to t+seq_len+1
+        # imag_value t+1 to t+seq_len+1
+        # discount_arr t+1 to t+seq_len+1
+        # imag_log_prob t+1 to t+seq_len+1
+        # policy_entropy t+1 to t+seq_len+1
+        def compute_lambda_returns(reward, value, discount, bootstrap, lambda_=0.95):
             """
-            Compute the discounted reward for a batch of data.
-            reward, value, and discount are all shape [horizon - 1, batch, 1] (last element is cut off)
-            Bootstrap is [batch, 1]
+            reward[t]    : shape [T, B]
+            value[t]     : shape [T, B]
+            discount[t]  : shape [T, B]   (gamma_t)
+            bootstrap    : value at last step v_{T}
+
+            Returns G[t] (shape [T, B])
             """
-            next_values = torch.cat([value[1:], bootstrap[None]], 0)
-            target = reward + discount * next_values * (1 - lambda_)
-            timesteps = list(range(reward.shape[0] - 1, -1, -1))
-            outputs = []
-            accumulated_reward = bootstrap
-            for t in timesteps:
-                inp = target[t]
-                discount_factor = discount[t]
-                accumulated_reward = inp + discount_factor * lambda_ * accumulated_reward
-                outputs.append(accumulated_reward)
-            returns = torch.flip(torch.stack(outputs), [0])
+            T = reward.shape[0]
+            returns = torch.zeros_like(reward)
+            last = bootstrap   # G_T = v_T
+
+            for t in reversed(range(T)):
+                # λ-return equation from Dreamer v2
+                last = reward[t] + discount[t] * ((1 - lambda_) * value[t] + lambda_ * last)
+                returns[t] = last
+
             return returns
 
-        lambda_returns = compute_return(imag_reward[:-1], imag_value[:-1], discount_arr[:-1], bootstrap=imag_value[-1])
-
+        # lambda_returns t+1 to t+seq_len
+        lambda_returns = compute_lambda_returns(imag_reward[:-1], imag_value[:-1], discount_arr[:-1], bootstrap=imag_value[-1])
         if self.config.actor_grad == 'reinforce':
+            # advantage_imag t+1 to t+seq_len
             advantage_imag = (lambda_returns - imag_value[:-1]).detach()
             objective = imag_log_prob[1:].unsqueeze(-1) * advantage_imag
 
@@ -338,10 +386,19 @@ class DreamerV2Agent(nn.Module):
         else:
             raise NotImplementedError
 
-        discount_arr = torch.cat([torch.ones_like(discount_arr[:1]), discount_arr[1:]])
-        discount = torch.cumprod(discount_arr[:-1], 0)
-        policy_entropy = policy_entropy[1:].unsqueeze(-1)
-        actor_loss = -torch.sum(torch.mean(discount * (objective + self.config.actor_entropy_scale * policy_entropy), dim=1)) 
+        if self.config.actor_with_discount:
+            discount_arr = torch.cat([torch.ones_like(discount_arr[:1, :, :]), discount_arr[1:, :, :]], dim=0)
+            discount = torch.cumprod(discount_arr[:-1, :, :], dim=0)
+        else:
+            discount = torch.ones_like(discount_arr[:-1, :, :])
+        policy_entropy = policy_entropy[1:, :].unsqueeze(-1)
+        weighted_policy_entropy = self.config.actor_entropy_scale * policy_entropy
+        loss_total = objective + weighted_policy_entropy
+        discounted_loss_total = discount * loss_total
+        print("Imagined rewards: ", imag_reward[:, 0, 0])
+        print("Loss total: ", loss_total[:, 0, 0])
+        print("Discounted loss total: ", discounted_loss_total[:, 0, 0])
+        actor_loss = -discounted_loss_total.sum(dim=0).mean()
         return actor_loss, discount, lambda_returns
 
     def actor_critic_loss(self, posterior):
@@ -349,7 +406,7 @@ class DreamerV2Agent(nn.Module):
             batched_posterior = self.rssm.rssm_detach(self.rssm.rssm_seq_to_batch(posterior, self.config.batch_size, self.config.rssm_seq_len - 1))
         
         with FreezeParameters(self.models_map['world_models']):
-            imag_rssm_states, imag_log_prob, policy_entropy = self.rssm.rollout_imagination(self.config.rssm_horizon, self.action_model, batched_posterior)
+            imag_rssm_states, imag_log_prob, policy_entropy, action_dist_probs = self.rssm.rollout_imagination(self.config.rssm_horizon, self.action_model, batched_posterior)
         
         imag_model_states = self.rssm.get_model_state(imag_rssm_states)
         with FreezeParameters(self.models_map['world_models'] + [self.target_value_model] + [self.discount_model]):
@@ -358,7 +415,7 @@ class DreamerV2Agent(nn.Module):
             imag_value_dist = self.target_value_model(imag_model_states)
             imag_value = imag_value_dist.mean
             discount_dist = self.discount_model(imag_model_states)
-            discount_arr = self.config.gamma * torch.round(discount_dist.base_dist.probs)              #mean = prob(disc==1)
+            discount_arr = self.config.gamma * discount_dist.mean
 
         actor_loss, discount, lambda_returns = self.actor_loss(imag_reward, imag_value, discount_arr, imag_log_prob, policy_entropy)
         critic_loss = self.critic_loss(imag_model_states, discount, lambda_returns)
@@ -368,12 +425,15 @@ class DreamerV2Agent(nn.Module):
         min_targ = torch.min(mean_target).item() 
         std_targ = torch.std(mean_target).item()
         mean_targ = torch.mean(mean_target).item()
+        policy_entropy = torch.mean(policy_entropy).item()
 
         target_info = {
-            'min_targ':min_targ,
-            'max_targ':max_targ,
-            'std_targ':std_targ,
-            'mean_targ':mean_targ,
+            'min_target':min_targ,
+            'max_target':max_targ,
+            'std_target':std_targ,
+            'mean_target':mean_targ,
+            'policy_entropy':policy_entropy,
+            'policy_dist_probs':action_dist_probs.detach().squeeze(),
         }
 
         return actor_loss, critic_loss, target_info
@@ -397,6 +457,18 @@ class DreamerV2Agent(nn.Module):
         value_losses = []
         entropy_losses = []
 
+        representation_losses = []
+        kl_losses = []
+        obs_losses = []
+        reward_losses = []
+        discount_losses = []
+        raw_kl_losses = []
+        policy_dist_probs = []  # for logging
+        mean_target = []
+        max_target = []
+        min_target = []
+        std_target = []
+
         # Outer loop: epochs, with tqdm progress bar
         for epoch_idx in trange(
             config.epochs,
@@ -405,7 +477,7 @@ class DreamerV2Agent(nn.Module):
         ):
             for i in range(config.collect_intervals):
                 batch = buffer.sample_sequences(config.rssm_seq_len, config.batch_size)
-                obs_batch = batch["observations"]  # (B, L, C, H, W) already on correct device
+                obs_batch = batch["observations"]  # (B, T, C, H, W) already on correct device
                 actions = batch["actions"]
                 rewards = batch["rewards"]
                 dones = batch["dones"]
@@ -420,8 +492,10 @@ class DreamerV2Agent(nn.Module):
                 if rewards.dim() == 2:
                     rewards = rewards.unsqueeze(-1)
 
+                # # normalize rewards
+                rewards = rewards / self.config.reward_scale
+                
                 loss_dict = self.representation_loss(obs_batch, actions, rewards, nonterms)
-
 
                 optimizer['world_model'].zero_grad()
                 loss_dict['world_model_loss'].backward()
@@ -449,15 +523,39 @@ class DreamerV2Agent(nn.Module):
 
                 policy_losses.append(actor_loss.item())
                 value_losses.append(value_loss.item())
-                entropy_losses.append(prior_ent.item())
+                entropy_losses.append(target_info['policy_entropy'])
+                representation_losses.append(loss_dict['world_model_loss'].item())
+                kl_losses.append(loss_dict['kl_loss'].item())
+                obs_losses.append(loss_dict['obs_loss'].item())
+                reward_losses.append(loss_dict['reward_loss'].item())
+                discount_losses.append(loss_dict['discount_loss'].item())
+                raw_kl_losses.append(loss_dict['raw_kl_loss'].item())
+                policy_dist_probs.append(target_info['policy_dist_probs'])
+                mean_target.append(target_info['mean_target'])
+                max_target.append(target_info['max_target'])
+                min_target.append(target_info['min_target'])
+                std_target.append(target_info['std_target'])
         
-        # Soft update target networks
-        self.update_target()
+                # Soft update target networks
+                self.update_target()
+
+        print("Current action distribution:")
+        print(torch.stack(policy_dist_probs, dim=0).mean(dim=0))
 
         logs = {
             "Loss_Policy": float(np.mean(policy_losses)) if policy_losses else 0.0,
             "Loss_Value": float(np.mean(value_losses)) if value_losses else 0.0,
             "Loss_Entropy": float(np.mean(entropy_losses)) if entropy_losses else 0.0,
+            "Loss_Representation": float(np.mean(representation_losses)) if representation_losses else 0.0,
+            "Loss_KL": float(np.mean(kl_losses)) if kl_losses else 0.0,
+            "Loss_Obs": float(np.mean(obs_losses)) if obs_losses else 0.0,
+            "Loss_Reward": float(np.mean(reward_losses)) if reward_losses else 0.0,
+            "Loss_Discount": float(np.mean(discount_losses)) if discount_losses else 0.0,
+            "Loss_RawKL": float(np.mean(raw_kl_losses)) if raw_kl_losses else 0.0,
+            "mean_target": float(np.mean(mean_target)) if mean_target else 0.0,
+            "max_target": float(np.mean(max_target)) if max_target else 0.0,
+            "min_target": float(np.mean(min_target)) if min_target else 0.0,
+            "std_target": float(np.mean(std_target)) if std_target else 0.0,
         }
         return logs
 
@@ -469,21 +567,21 @@ class DreamerV2Agent(nn.Module):
     
     def get_state_dict(self):
         return {
-            "RSSM": self.RSSM.state_dict(),
-            "ObsEncoder": self.ObsEncoder.state_dict(),
-            "ObsDecoder": self.ObsDecoder.state_dict(),
-            "RewardDecoder": self.RewardDecoder.state_dict(),
-            "ActionModel": self.ActionModel.state_dict(),
-            "ValueModel": self.ValueModel.state_dict(),
-            "DiscountModel": self.DiscountModel.state_dict(),
+            "RSSM": self.rssm.state_dict(),
+            "ObsEncoder": self.obs_encoder.state_dict(),
+            "ObsDecoder": self.obs_decoder.state_dict(),
+            "RewardDecoder": self.reward_decoder.state_dict(),
+            "ActionModel": self.action_model.state_dict(),
+            "ValueModel": self.value_model.state_dict(),
+            "DiscountModel": self.discount_model.state_dict(),
         }
 
     def load_state_dict(self, state_dict):
-        self.RSSM.load_state_dict(state_dict["RSSM"])
-        self.ObsEncoder.load_state_dict(state_dict["ObsEncoder"])
-        self.ObsDecoder.load_state_dict(state_dict["ObsDecoder"])
-        self.RewardDecoder.load_state_dict(state_dict["RewardDecoder"])
-        self.ActionModel.load_state_dict(state_dict["ActionModel"])
-        self.ValueModel.load_state_dict(state_dict["ValueModel"])
-        self.DiscountModel.load_state_dict(state_dict["DiscountModel"])
+        self.rssm.load_state_dict(state_dict["RSSM"])
+        self.obs_encoder.load_state_dict(state_dict["ObsEncoder"])
+        self.obs_decoder.load_state_dict(state_dict["ObsDecoder"])
+        self.reward_decoder.load_state_dict(state_dict["RewardDecoder"])
+        self.action_model.load_state_dict(state_dict["ActionModel"])
+        self.value_model.load_state_dict(state_dict["ValueModel"])
+        self.discount_model.load_state_dict(state_dict["DiscountModel"])
     

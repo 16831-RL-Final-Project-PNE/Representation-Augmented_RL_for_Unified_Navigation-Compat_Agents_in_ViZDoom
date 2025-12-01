@@ -34,13 +34,19 @@ class DenseModel(nn.Module):
         for i in range(self._layers-1):
             model += [nn.Linear(self._node_size, self._node_size)]
             model += [nn.ELU()]
-        model += [nn.Linear(self._node_size, int(np.prod(self._output_shape)))]
+        out_dim = int(np.prod(self._output_shape))
+        if self.dist == "normal":
+            model += [nn.Linear(self._node_size, out_dim * 2)]
+        else:
+            model += [nn.Linear(self._node_size, out_dim)]
         return nn.Sequential(*model)
 
     def forward(self, input):
         dist_inputs = self.model(input)
         if self.dist == 'normal':
-            return td.independent.Independent(td.Normal(dist_inputs, 1), len(self._output_shape))
+            mean, log_std = torch.chunk(dist_inputs, 2, dim=-1)
+            std = F.softplus(log_std) + 1e-4
+            return td.Independent(td.Normal(mean, std), len(self._output_shape))
         if self.dist == 'binary':
             return td.independent.Independent(td.Bernoulli(logits=dist_inputs), len(self._output_shape))
         if self.dist == None:
@@ -110,7 +116,7 @@ class ObsDecoder(nn.Module):
             nn.ELU(),
             nn.ConvTranspose2d(2*depth, depth, kernel, 1),
             nn.ELU(),
-            nn.ConvTranspose2d(depth, c, kernel, 1),
+            nn.ConvTranspose2d(depth, 2*c, kernel, 1),
         )
 
     def forward(self, x):
@@ -121,8 +127,22 @@ class ObsDecoder(nn.Module):
         x = self.linear(x)
         x = torch.reshape(x, (squeezed_size, *self.conv_shape))
         x = self.decoder(x)
-        mean = torch.reshape(x, (*batch_shape, *self.output_shape))
-        obs_dist = td.Independent(td.Normal(mean, 1), len(self.output_shape))
+
+        # Split channels into mean and log_std
+        c = self.output_shape[0]
+        mean, log_std = torch.split(x, c, dim=1)
+
+        # Mean in [0,1]
+        mean = torch.sigmoid(mean)
+
+        # std = softplus(log_std) + epsilon
+        std = F.softplus(log_std) + 1e-4
+
+        # reshape
+        mean = mean.reshape(*batch_shape, *self.output_shape)
+        std  = std.reshape(*batch_shape, *self.output_shape)
+
+        obs_dist = td.Independent(td.Normal(mean, std), len(self.output_shape))
         return obs_dist
     
 def conv_out(h_in, padding, kernel_size, stride):

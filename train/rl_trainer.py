@@ -154,7 +154,7 @@ class RLTrainer:
 
         if hasattr(self.agent, "reset"):
             self.agent.reset()
-
+        
         # Use tqdm to show per-iteration progress over environment steps
         for step in trange(
             self.config.steps_per_iteration,
@@ -164,7 +164,7 @@ class RLTrainer:
             obs_tensor = self._obs_to_tensor(obs).to(self.device)
 
             with torch.no_grad():
-                actions, log_probs, values = self.agent.act(obs_tensor, deterministic=True)
+                actions, log_probs, values = self.agent.act(obs_tensor, deterministic=False)
 
             if self.agent_type == "dreamerv2":
                 actions = actions.argmax(dim=-1)
@@ -172,6 +172,11 @@ class RLTrainer:
             action = int(actions.item())
             value = float(values.item())
             log_prob = float(log_probs.item())
+
+            epsilon = self.get_epsilon()
+            if np.random.rand() < epsilon:
+                action = np.random.randint(self.n_actions)
+                log_prob = np.log(1.0 / self.n_actions)
 
             next_obs, reward, done, _info = self.env.step(action)
 
@@ -381,7 +386,7 @@ class RLTrainer:
                 agent_type=self.agent_type,
             )
 
-            if iteration % 20 == 0:  # cada 20 iteraciones
+            if iteration % 1 == 0:  # cada 20 iteraciones
                 gif_path = os.path.join(self.config.log_dir, f"episode_{iteration}.gif")
                 self.save_episode_gif(self.eval_env, self.agent, gif_path)
 
@@ -396,6 +401,7 @@ class RLTrainer:
             )
 
             # 5) optional periodic checkpoint saving
+            print(f"Current epsilon: {self.get_epsilon()} at iteration {self.total_envsteps}")
             if (
                 getattr(self.config, "save_every", 0) > 0
                 and (iteration + 1) % self.config.save_every == 0
@@ -411,7 +417,16 @@ class RLTrainer:
         print(f"Saved eval log to {self.config.eval_log_path}")
         self.writer.close()
 
-    def save_episode_gif(self, env, agent, path: str, max_frames: int = 2000, deterministic: bool = True):
+    def get_epsilon(self):
+        eps_start = self.config.epsilon_start
+        eps_end = self.config.epsilon_end
+        decay = self.config.epsilon_decay
+
+        # total_envsteps ya existe en RLTrainer
+        eps = eps_end + (eps_start - eps_end) * np.exp(-1.0 * self.total_envsteps / decay)
+        return eps
+
+    def save_episode_gif(self, env, agent, path: str, max_frames: int = 2000, deterministic: bool = False):
         """
         Run one full episode in `env` using `agent` and save it as a GIF to `path`.
         The environment must return RGB frames as observations.
@@ -423,9 +438,20 @@ class RLTrainer:
         if hasattr(agent, "reset"):
             agent.reset()
 
+        action_history = []
         for _ in range(max_frames):
             # Store frame (assumes obs is RGB shape (H,W,3))
-            frames.append(obs)
+            frame = np.array(obs)
+
+            # remove batch dim
+            if frame.ndim == 4:
+                frame = frame.squeeze(axis=0)
+
+            # convert CHW → HWC
+            if frame.ndim == 3 and frame.shape[0] == 3:
+                frame = frame.transpose(1, 2, 0)
+
+            frames.append(frame)
 
             obs_tensor = self._obs_to_tensor(obs).to(self.device)
 
@@ -435,12 +461,20 @@ class RLTrainer:
                     actions = actions.argmax(dim=-1)
 
             action = int(actions.item())
+            action_history.append(action)
             obs, reward, done, _info = env.step(action)
 
             if done:
-                frames.append(obs)
+                frame = np.array(obs)
+                if frame.ndim == 4:
+                    frame = frame.squeeze(axis=0)
+                if frame.ndim == 3 and frame.shape[0] == 3:
+                    frame = frame.transpose(1, 2, 0)
+                frames.append(frame)
                 break
 
+        action_history = np.array(action_history)
+        print("Count of actions:", np.unique(action_history, return_counts=True))
         # Save GIF
         Path(Path(path).parent).mkdir(parents=True, exist_ok=True)
         imageio.mimsave(path, frames, fps=30)

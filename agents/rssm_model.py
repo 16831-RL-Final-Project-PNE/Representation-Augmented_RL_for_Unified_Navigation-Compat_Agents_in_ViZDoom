@@ -75,17 +75,20 @@ class RSSMDiscrete(nn.Module):
         next_rssm_states = []
         action_entropy = []
         imag_log_probs = []
+        action_dist_probs = []
         for t in range(horizon):
             action, action_dist = actor(self.get_model_state(rssm_state))
             rssm_state = self.rssm_imagine(action, rssm_state, nonterms=torch.ones(1, dtype=torch.bool, device=rssm_state.stoch.device))
             next_rssm_states.append(rssm_state)
             action_entropy.append(action_dist.entropy())
             imag_log_probs.append(action_dist.log_prob(torch.round(action.detach())))
-
+            action_dist_probs.append(action_dist.probs)
         next_rssm_states = self.rssm_stack_states(next_rssm_states, dim=0)
         action_entropy = torch.stack(action_entropy, dim=0)
         imag_log_probs = torch.stack(imag_log_probs, dim=0)
-        return next_rssm_states, imag_log_probs, action_entropy
+        action_dist_probs = torch.stack(action_dist_probs, dim=0).mean(dim=0).mean(dim=0)
+        
+        return next_rssm_states, imag_log_probs, action_entropy, action_dist_probs
 
     def rssm_stack_states(self, rssm_states, dim):
         return RSSMDiscState(
