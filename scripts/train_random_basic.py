@@ -125,6 +125,7 @@ def main():
 
     eval_env = DoomEnv(
         scenario=args.scenario,
+        action_space=args.action_space,
         frame_repeat=args.frame_repeat,
         frame_stack=args.frame_stack,
         width=args.width,

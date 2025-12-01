@@ -59,7 +59,7 @@ python -m scripts.eval_random_play \
 
 # PPO Agent
 # 1 run ppo agent training
-CUDA_VISIBLE_DEVICES=0 python -m scripts.train_ppo_basic \
+CUDA_VISIBLE_DEVICES=4 python -m scripts.train_ppo_basic \
   --scenario basic \
   --action_space usual \
   --total_iterations 200 \
@@ -72,9 +72,9 @@ CUDA_VISIBLE_DEVICES=0 python -m scripts.train_ppo_basic \
   --eval_deterministic \
   --eval_episodes 10 \
   --eval_interval 1 \
-  --eval_log_dir ./logs \
+  --eval_log_dir /data/patrick/16831RL/logs \
   --eval_log_name basic_ppo_eval.npz \
-  --tb_log_dir ./logs/tb_basic_ppo \
+  --tb_log_dir /data/patrick/16831RL/logs/tb_basic_ppo \
   --checkpoint_dir /data/patrick/16831RL/checkpoints \
   --checkpoint_name basic_ppo \
   --save_every 80
@@ -149,15 +149,15 @@ CUDA_VISIBLE_DEVICES=0 python -m scripts.train_ppo_basic \
   --rnd_epochs 1 \
   --rnd_int_decay \
   --eval_deterministic \
-  --eval_log_dir ./logs \
+  --eval_log_dir /data/patrick/16831RL/logs \
   --eval_log_name mwh_ppo_rnd_eval.npz \
-  --tb_log_dir ./logs/tb_mwh_ppo_rnd \
+  --tb_log_dir /data/patrick/16831RL/logs/tb_mwh_ppo_rnd \
   --checkpoint_dir /data/patrick/16831RL/checkpoints \
   --checkpoint_name mwh_ppo_rnd \
   --save_every 80
 
 # need modified filename
-CUDA_VISIBLE_DEVICES=0 python -m scripts.train_ppo_basic \
+CUDA_VISIBLE_DEVICES=4 python -m scripts.train_ppo_basic \
   --scenario basic \
   --action_space usual \
   --total_iterations 200 \
@@ -168,9 +168,9 @@ CUDA_VISIBLE_DEVICES=0 python -m scripts.train_ppo_basic \
   --value_coef 0.25 \
   --eval_episodes 10 \
   --eval_interval 1 \
-  --eval_log_dir ./logs \
+  --eval_log_dir /data/patrick/16831RL/logs \
   --eval_log_name basic_ppo_dinov3_eval.npz \
-  --tb_log_dir ./logs/tb_basic_ppo_dinov3 \
+  --tb_log_dir /data/patrick/16831RL/logs/tb_basic_ppo_dinov3 \
   --checkpoint_dir /data/patrick/16831RL/checkpoints \
   --checkpoint_name basic_ppo_dinov3 \
   --save_every 80 \
@@ -201,9 +201,9 @@ CUDA_VISIBLE_DEVICES=5 python -m scripts.train_ppo_basic \
   --rnd_epochs 1 \
   --rnd_int_decay \
   --eval_deterministic \
-  --eval_log_dir ./logs \
+  --eval_log_dir /data/patrick/16831RL/logs \
   --eval_log_name basic_ppo_dinov3_rnd_eval.npz \
-  --tb_log_dir ./logs/tb_basic_ppo_dinov3_rnd \
+  --tb_log_dir /data/patrick/16831RL/logs/tb_basic_ppo_dinov3_rnd \
   --checkpoint_dir /data/patrick/16831RL/checkpoints \
   --checkpoint_name basic_ppo_dinov3_rnd \
   --save_every 80
@@ -253,9 +253,9 @@ CUDA_VISIBLE_DEVICES=0 python -m scripts.train_ppo_basic \
   --rnd_epochs 1 \
   --rnd_int_decay \
   --eval_deterministic \
-  --eval_log_dir ./logs \
+  --eval_log_dir /data/patrick/16831RL/logs \
   --eval_log_name mwh_ppo_dinov3_rnd_eval.npz \
-  --tb_log_dir ./logs/tb_mwh_ppo_dinov3_rnd \
+  --tb_log_dir /data/patrick/16831RL/logs/tb_mwh_ppo_dinov3_rnd \
   --checkpoint_dir /data/patrick/16831RL/checkpoints \
   --checkpoint_name mwh_ppo_dinov3_rnd \
   --save_every 80
@@ -333,7 +333,7 @@ CUDA_VISIBLE_DEVICES=1 python -m scripts.train_ppo_basic \
   --freeze_backbone
 
 # attempting
-CUDA_VISIBLE_DEVICES=7 python -m scripts.train_ppo_basic \
+CUDA_VISIBLE_DEVICES=2 python -m scripts.train_ppo_basic \
   --scenario my_way_home \
   --action_space no_shoot \
   --backbone dinov2 \
@@ -356,9 +356,9 @@ CUDA_VISIBLE_DEVICES=7 python -m scripts.train_ppo_basic \
   --rnd_epochs 1 \
   --rnd_int_decay \
   --eval_deterministic \
-  --eval_log_dir ./logs \
+  --eval_log_dir /data/patrick/16831RL/logs \
   --eval_log_name mwh_ppo_dinov2_rnd_eval.npz \
-  --tb_log_dir ./logs/tb_mwh_ppo_dinov2_rnd \
+  --tb_log_dir /data/patrick/16831RL/logs/tb_mwh_ppo_dinov2_rnd \
   --checkpoint_dir /data/patrick/16831RL/checkpoints \
   --checkpoint_name mwh_ppo_dinov2_rnd \
   --save_every 80
