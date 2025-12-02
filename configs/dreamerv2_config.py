@@ -4,8 +4,8 @@ from dataclasses import dataclass, field
 @dataclass
 class DreamerV2Config:
     total_iterations: int = 200
-    steps_per_iteration: int = 4096
-    learning_rate: dict[str, float] = field(default_factory=lambda: {'world_model': 4e-3, 'actor_model': 2e-4, 'value_model': 1e-4})
+    steps_per_iteration: int = 8192
+    learning_rate: dict[str, float] = field(default_factory=lambda: {'world_model': 2e-4, 'actor_model': 4e-5, 'value_model': 1e-4})
 
     gamma: float = 0.995
     gae_lambda: float = 0.95
@@ -29,7 +29,7 @@ class DreamerV2Config:
 
     # DreamerV2 Model Config
     embedding_size: int = 256
-    batch_size: int = 32
+    batch_size: int = 4
     grad_clip_norm: float = 10.0
 
     use_dino_v3: bool = False
@@ -39,22 +39,22 @@ class DreamerV2Config:
     use_slow_target: bool = True
     slow_target_fraction: float = 0.05
 
-    rssm_deter_size: int = 128
-    rssm_category_size: int = 16
-    rssm_class_size: int = 16
-    rssm_node_size: int = 100
-    rssm_seq_len: int = 30
+    rssm_deter_size: int = 360
+    rssm_category_size: int = 32
+    rssm_class_size: int = 32
+    rssm_node_size: int = 200
+    rssm_seq_len: int = 8
     rssm_horizon: int = 15
 
     kl_use_kl_balance: bool = True
     kl_balance_scale: float = 0.8
-    kl_use_free_nats: bool = True
-    kl_free_nats: float = 0.9
+    kl_use_free_nats: bool = False
+    kl_free_nats: float = 1.0
 
     actor_grad: str = 'dynamics' # 'reinforce' or 'dynamics'
-    actor_entropy_scale: float = 3e-2
-    actor_layers: int = 3
-    actor_node_size: int = 100
+    actor_entropy_scale: float = 5e-2
+    actor_layers: int = 4
+    actor_node_size: int = 256
 
     epsilon_start: float = 0.9
     epsilon_end: float = 0.05
@@ -62,7 +62,7 @@ class DreamerV2Config:
 
     kl_loss_scale: float = 1.0
     discount_loss_scale: float = 1.0
-    obs_loss_scale: float = 10.0
+    obs_loss_scale: float = 1.0
     reward_loss_scale: float = 1.0
 
     actor_with_discount: bool = False

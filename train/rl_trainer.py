@@ -21,8 +21,6 @@ from configs.dreamerv2_config import DreamerV2Config
 import imageio
 from pathlib import Path
 
-
-
 class RLTrainer:
     """
     Generic RL trainer that can work with different agents.
@@ -480,3 +478,33 @@ class RLTrainer:
         imageio.mimsave(path, frames, fps=30)
         print(f"Saved episode GIF to {path}")
 
+
+
+def model_size_mb(model):
+    """Return size in MB for all parameters of model (float32 = 4 bytes)."""
+    total_params = sum(p.numel() for p in model.parameters())
+    return (total_params * 4) / (1024**2)
+
+
+def print_model_memory(agent):
+    print("\n=== MODEL MEMORY USAGE (parameters only) ===")
+
+    components = {
+        "ObsEncoder": agent.obs_encoder,
+        "ObsDecoder": agent.obs_decoder,
+        "RSSM": agent.rssm,
+        "RewardDecoder": agent.reward_decoder,
+        "DiscountModel": agent.discount_model,
+        "ValueModel": agent.value_model,
+        "TargetValue": agent.target_value_model,
+        "Actor": agent.action_model,
+    }
+
+    total = 0
+    for name, model in components.items():
+        size = model_size_mb(model)
+        total += size
+        print(f"{name:20s}: {size:8.2f} MB")
+
+    print("--------------------------------------------")
+    print(f"TOTAL                     : {total:8.2f} MB\n")

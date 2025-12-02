@@ -159,20 +159,14 @@ class DreamerV2Agent(nn.Module):
 
         self.config = config
 
-        print("Building RSSM...")
         self.rssm = RSSMDiscrete(self.action_size, rssm_node_size, embedding_size, 
                     class_size=class_size, category_size=category_size, deter_size=deter_size, stoch_size=stoch_size)
-        print("Building Action Model...")
         self.action_model = DiscreteActionModel(self.action_size, deter_size, stoch_size, embedding_size, config)
-        print("Building Reward and Value...")
         self.reward_decoder = DenseModel((1,), model_state_size, dist='normal')
         self.value_model = DenseModel((1,), model_state_size, dist='normal')
-        print("Building Target Value Model...")
         self.target_value_model = DenseModel((1,), model_state_size, dist='normal')
         self.target_value_model.load_state_dict(self.value_model.state_dict())
-        print("Building Discount Model...")
         self.discount_model = DenseModel((1,), model_state_size, dist='binary')
-        print("Building Observation Encoder and Decoder...")
 
         # TODO: Change here with DinoV3 encoder
         if config.use_dino_v3:
@@ -191,6 +185,7 @@ class DreamerV2Agent(nn.Module):
             'value_models': [self.value_model],
             'actor_critic_models': [self.action_model, self.value_model],
         }
+
 
     @abstractmethod
     def get_parameters(self, model_list: list[nn.Module]):
@@ -257,7 +252,7 @@ class DreamerV2Agent(nn.Module):
         log_prob = obs_dist.log_prob(obs)  # sum over pixels
         num_pix = np.prod(obs.shape[-3:])  # C*H*W
 
-        # Normalize per pixel
+        # # Normalize per pixel
         log_prob_per_pixel = log_prob / num_pix
 
         # We want mean over batch/time
@@ -313,8 +308,8 @@ class DreamerV2Agent(nn.Module):
         prior, posterior = self.rssm.rollout_observation(self.config.rssm_seq_len, embed, actions, nonterms, prev_rssm_state)
         post_model_state = self.rssm.get_model_state(posterior)                #t+1 to t+seq_len+1   
         obs_dist = self.obs_decoder(post_model_state[:-1])                     #t+1 to t+seq_len
-        save_obs_dist_gif(obs_dist, filename="reconstruction.gif", fps=6)
-        print("Passed this part")
+        with torch.no_grad():
+            save_obs_dist_gif(obs_dist, filename="reconstruction.gif", fps=6)
         reward_dist = self.reward_decoder(post_model_state[:-1])               #t+1 to t+seq_len   
         discount_dist = self.discount_model(post_model_state[:-1])             #t+1 to t+seq_len   
         
@@ -521,16 +516,16 @@ class DreamerV2Agent(nn.Module):
                     prior_ent = torch.mean(loss_dict['prior_dist'].entropy())
                     post_ent = torch.mean(loss_dict['post_dist'].entropy())
 
-                policy_losses.append(actor_loss.item())
-                value_losses.append(value_loss.item())
+                policy_losses.append(actor_loss.detach().item())
+                value_losses.append(value_loss.detach().item())
                 entropy_losses.append(target_info['policy_entropy'])
-                representation_losses.append(loss_dict['world_model_loss'].item())
-                kl_losses.append(loss_dict['kl_loss'].item())
-                obs_losses.append(loss_dict['obs_loss'].item())
-                reward_losses.append(loss_dict['reward_loss'].item())
-                discount_losses.append(loss_dict['discount_loss'].item())
-                raw_kl_losses.append(loss_dict['raw_kl_loss'].item())
-                policy_dist_probs.append(target_info['policy_dist_probs'])
+                representation_losses.append(loss_dict['world_model_loss'].detach().item())
+                kl_losses.append(loss_dict['kl_loss'].detach().item())
+                obs_losses.append(loss_dict['obs_loss'].detach().item())
+                reward_losses.append(loss_dict['reward_loss'].detach().item())
+                discount_losses.append(loss_dict['discount_loss'].detach().item())
+                raw_kl_losses.append(loss_dict['raw_kl_loss'].detach().item())
+                policy_dist_probs.append(target_info['policy_dist_probs'].detach().mean().item())
                 mean_target.append(target_info['mean_target'])
                 max_target.append(target_info['max_target'])
                 min_target.append(target_info['min_target'])

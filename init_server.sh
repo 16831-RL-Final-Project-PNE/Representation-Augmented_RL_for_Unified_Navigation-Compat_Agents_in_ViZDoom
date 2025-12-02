@@ -1,11 +1,11 @@
 
-apt-get update
-apt-get install software-properties-common
-add-apt-repository ppa:deadsnakes/ppa
-apt-get update
-apt-get install python3.10 python3.10-venv python3.10-dev
-apt-get install git
-apt-get install swig
+sudo apt-get update
+sudo apt-get install software-properties-common
+sudo add-apt-repository ppa:deadsnakes/ppa
+sudo apt-get update
+sudo apt-get install python3.10 python3.10-venv python3.10-dev
+sudo apt-get install git
+sudo apt-get install swig
 
 git clone https://github.com/COMPAT-RL/Representation-Augmented_RL_for_Unified_Navigation-Compat_Agents_in_ViZDoom.git
 python3.10 -m venv rl_env

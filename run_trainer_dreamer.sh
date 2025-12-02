@@ -2,8 +2,7 @@ python -m scripts.train_dreamerv2 \
   --scenario basic \
   --action_space usual \
   --total_iterations 600 \
-  --steps_per_iteration 4096 \
-  --use_dino_v3 \
+  --steps_per_iteration 8192 \
   --tb_log_dir ./logs/tb_dreamerv2_basic \
   --eval_log_dir ./logs \
   --eval_log_name dreamerv2_basic_run1_eval.npz \
