@@ -245,7 +245,9 @@ class RLTrainer:
             int_coef = float(getattr(self.config, "rnd_int_coef", 1.0))
             ext_coef = float(getattr(self.config, "rnd_ext_coef", 1.0))
 
-            mixed_rewards = ext_coef * ext_rewards + int_coef * int_rewards_norm_cpu
+            mixed_rewards = ext_rewards.clone()
+            mask = (ext_rewards == 0.0)  # only add intrinsic reward when there is no env reward
+            mixed_rewards[mask] += int_coef * int_rewards_norm_cpu[mask]
             self.buffer.rewards[:n] = mixed_rewards.to(self.buffer.rewards.device)
 
             # Train RND predictor on this rollout

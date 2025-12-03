@@ -49,13 +49,30 @@ python -m scripts.eval_random_play \
   --frame_repeat 4 \
   --frame_stack 4 \
   --width 84 --height 84 \
-  --base_res 320x240 \
-  --gif ./out/mwh_random_v2/best.gif \
-  --gif_dir ./out/mwh_random_v2/eps \
-  --fps 12 \
+  --base_res 800x600 \
+  --gif ./out/mwh_random_v3/best.gif \
+  --gif_dir ./out/mwh_random_v3/eps \
+  --fps 15 \
   --gif_scale 1 \
   --gif_repeat 1 \
   --seed 0
+
+python -m scripts.eval_random_play \
+  --scenario my_way_home \
+  --action_space no_shoot \
+  --episodes 5 \
+  --max_gif_frames 800 \
+  --frame_repeat 4 \
+  --frame_stack 4 \
+  --width 84 --height 84 \
+  --base_res 800x600 \
+  --gif ./out/mwh_random_v4/best.gif \
+  --gif_dir ./out/mwh_random_v4/eps \
+  --fps 15 \
+  --gif_scale 1 \
+  --gif_repeat 1 \
+  --seed 0
+
 
 # PPO Agent
 # 1 run ppo agent training
@@ -92,19 +109,19 @@ CUDA_VISIBLE_DEVICES=5 python -m scripts.train_ppo_basic \
   --value_coef 0.25 \
   --entropy_coef 0.01 \
   --use_rnd \
-  --rnd_int_coef 0.2 \
+  --rnd_int_coef 0.05 \
   --rnd_ext_coef 1.0 \
   --rnd_gamma 0.99 \
-  --rnd_lr 1e-5 \
+  --rnd_lr 1e-4 \
   --rnd_weight_decay 1e-4 \
-  --rnd_batch_size 128 \
+  --rnd_batch_size 256 \
   --rnd_epochs 1 \
   --rnd_int_decay \
-  --eval_log_dir ./logs \
-  --eval_log_name basic_ppo_rnd_eval.npz \
-  --tb_log_dir ./logs/tb_basic_ppo_rnd \
+  --eval_log_dir /data/patrick/16831RL/logs \
+  --eval_log_name basic_ppo_rnd_eval_run2.npz \
+  --tb_log_dir /data/patrick/16831RL/logs/tb_basic_ppo_rnd_run2 \
   --checkpoint_dir /data/patrick/16831RL/checkpoints \
-  --checkpoint_name basic_ppo_rnd \
+  --checkpoint_name basic_ppo_rnd_run2 \
   --save_every 80
 
 python -m scripts.train_ppo_basic \
@@ -140,8 +157,8 @@ CUDA_VISIBLE_DEVICES=0 python -m scripts.train_ppo_basic \
   --value_coef 0.25 \
   --entropy_coef 0.01 \
   --use_rnd \
-  --rnd_int_coef 0.3 \
-  --rnd_ext_coef 1.0 \
+  --rnd_int_coef 0.01 \
+  --rnd_ext_coef 2.0 \
   --rnd_gamma 0.99 \
   --rnd_lr 1e-5 \
   --rnd_weight_decay 1e-4 \
@@ -157,7 +174,7 @@ CUDA_VISIBLE_DEVICES=0 python -m scripts.train_ppo_basic \
   --save_every 80
 
 # need modified filename
-CUDA_VISIBLE_DEVICES=4 python -m scripts.train_ppo_basic \
+CUDA_VISIBLE_DEVICES=1 python -m scripts.train_ppo_basic \
   --scenario basic \
   --action_space usual \
   --total_iterations 200 \
@@ -169,16 +186,16 @@ CUDA_VISIBLE_DEVICES=4 python -m scripts.train_ppo_basic \
   --eval_episodes 10 \
   --eval_interval 1 \
   --eval_log_dir /data/patrick/16831RL/logs \
-  --eval_log_name basic_ppo_dinov3_eval.npz \
-  --tb_log_dir /data/patrick/16831RL/logs/tb_basic_ppo_dinov3 \
+  --eval_log_name basic_ppo_dinov3_run2_eval.npz \
+  --tb_log_dir /data/patrick/16831RL/logs/tb_basic_ppo_dinov3_run2 \
   --checkpoint_dir /data/patrick/16831RL/checkpoints \
-  --checkpoint_name basic_ppo_dinov3 \
+  --checkpoint_name basic_ppo_dinov3_run2 \
   --save_every 80 \
   --backbone dinov3 \
   --freeze_backbone
 
 # already run
-CUDA_VISIBLE_DEVICES=5 python -m scripts.train_ppo_basic \
+CUDA_VISIBLE_DEVICES=0 python -m scripts.train_ppo_basic \
   --scenario basic \
   --action_space usual \
   --backbone dinov3 \
@@ -187,25 +204,25 @@ CUDA_VISIBLE_DEVICES=5 python -m scripts.train_ppo_basic \
   --total_iterations 200 \
   --steps_per_iteration 8192 \
   --batch_size 128 \
-  --learning_rate 1e-4 \
+  --learning_rate 3e-4 \
   --clip_coef 0.1 \
   --value_coef 0.25 \
   --entropy_coef 0.01 \
   --use_rnd \
-  --rnd_int_coef 0.3 \
+  --rnd_int_coef 0.02 \
   --rnd_ext_coef 1.0 \
   --rnd_gamma 0.99 \
-  --rnd_lr 1e-5 \
+  --rnd_lr 1e-4 \
   --rnd_weight_decay 1e-4 \
-  --rnd_batch_size 128 \
+  --rnd_batch_size 256 \
   --rnd_epochs 1 \
   --rnd_int_decay \
   --eval_deterministic \
   --eval_log_dir /data/patrick/16831RL/logs \
-  --eval_log_name basic_ppo_dinov3_rnd_eval.npz \
-  --tb_log_dir /data/patrick/16831RL/logs/tb_basic_ppo_dinov3_rnd \
+  --eval_log_name basic_ppo_dinov3_rnd_eval_run2.npz \
+  --tb_log_dir /data/patrick/16831RL/logs/tb_basic_ppo_dinov3_rnd_run2 \
   --checkpoint_dir /data/patrick/16831RL/checkpoints \
-  --checkpoint_name basic_ppo_dinov3_rnd \
+  --checkpoint_name basic_ppo_dinov3_rnd_run2 \
   --save_every 80
 
 python -m scripts.train_ppo_basic \
@@ -244,8 +261,8 @@ CUDA_VISIBLE_DEVICES=0 python -m scripts.train_ppo_basic \
   --value_coef 0.25 \
   --entropy_coef 0.01 \
   --use_rnd \
-  --rnd_int_coef 0.2 \
-  --rnd_ext_coef 1.0 \
+  --rnd_int_coef 0.01 \
+  --rnd_ext_coef 2.0 \
   --rnd_gamma 0.99 \
   --rnd_lr 1e-5 \
   --rnd_weight_decay 1e-4 \
@@ -272,16 +289,16 @@ CUDA_VISIBLE_DEVICES=5 python -m scripts.train_ppo_basic \
   --eval_episodes 10 \
   --eval_interval 1 \
   --eval_log_dir ./logs \
-  --eval_log_name basic_ppo_dinov2_eval.npz \
+  --eval_log_name basic_ppo_dinov2_run2_eval.npz \
   --tb_log_dir ./logs/tb_basic_ppo_dinov2 \
   --checkpoint_dir /data/patrick/16831RL/checkpoints \
-  --checkpoint_name basic_ppo_dinov2 \
+  --checkpoint_name basic_ppo_dinov2_run2 \
   --save_every 80 \
   --backbone dinov2 \
   --freeze_backbone
 
 # attempting
-CUDA_VISIBLE_DEVICES=2 python -m scripts.train_ppo_basic \
+CUDA_VISIBLE_DEVICES=4 python -m scripts.train_ppo_basic \
   --scenario basic \
   --action_space usual \
   --backbone dinov2 \
@@ -290,24 +307,24 @@ CUDA_VISIBLE_DEVICES=2 python -m scripts.train_ppo_basic \
   --total_iterations 200 \
   --steps_per_iteration 8192 \
   --batch_size 128 \
-  --learning_rate 1e-4 \
+  --learning_rate 3e-4 \
   --clip_coef 0.1 \
   --value_coef 0.25 \
   --entropy_coef 0.01 \
   --use_rnd \
-  --rnd_int_coef 0.3 \
+  --rnd_int_coef 0.02 \
   --rnd_ext_coef 1.0 \
   --rnd_gamma 0.99 \
-  --rnd_lr 1e-5 \
+  --rnd_lr 1e-4 \
   --rnd_weight_decay 1e-4 \
-  --rnd_batch_size 128 \
+  --rnd_batch_size 256 \
   --rnd_epochs 1 \
   --rnd_int_decay \
-  --eval_log_dir ./logs \
-  --eval_log_name basic_ppo_dinov2_rnd_eval.npz \
-  --tb_log_dir ./logs/tb_basic_ppo_dinov2_rnd \
+  --eval_log_dir /data/patrick/16831RL/logs \
+  --eval_log_name basic_ppo_dinov2_rnd_eval_run2.npz \
+  --tb_log_dir /data/patrick/16831RL/logs/tb_basic_ppo_dinov2_rnd_run2 \
   --checkpoint_dir /data/patrick/16831RL/checkpoints \
-  --checkpoint_name basic_ppo_dinov2_rnd \
+  --checkpoint_name basic_ppo_dinov2_rnd_run2 \
   --save_every 80
 
 
@@ -347,10 +364,10 @@ CUDA_VISIBLE_DEVICES=2 python -m scripts.train_ppo_basic \
   --value_coef 0.25 \
   --entropy_coef 0.01 \
   --use_rnd \
-  --rnd_int_coef 0.3 \
-  --rnd_ext_coef 1.0 \
+  --rnd_int_coef 0.01 \
+  --rnd_ext_coef 2.0 \
   --rnd_gamma 0.99 \
-  --rnd_lr 1e-5 \
+  --rnd_lr 3e-4 \
   --rnd_weight_decay 1e-4 \
   --rnd_batch_size 256 \
   --rnd_epochs 1 \
@@ -443,6 +460,41 @@ python -m scripts.eval_ppo_basic_play \
   --deterministic
 
 python -m scripts.eval_ppo_basic_play \
+  --checkpoint /data/patrick/16831RL/checkpoints/basic_ppo_final.pt \
+  --scenario basic \
+  --action_space usual \
+  --episodes 15 \
+  --frame_repeat 4 \
+  --frame_stack 4 \
+  --width 84 --height 84 \
+  --base_res 800x600 \
+  --gif ./out/basic_ppo_v6/best.gif \
+  --gif_dir ./out/basic_ppo_v6/eps \
+  --fps 15 \
+  --gif_scale 1 \
+  --gif_repeat 1 \
+  --deterministic
+
+python -m scripts.eval_ppo_basic_play \
+  --checkpoint /data/patrick/16831RL/checkpoints/basic_ppo_dinov3_iter_160.pt \
+  --scenario basic \
+  --action_space usual \
+  --backbone dinov3 \
+  --freeze_backbone \
+  --feat_dim 256 \
+  --episodes 5 \
+  --frame_repeat 4 \
+  --frame_stack 4 \
+  --width 84 --height 84 \
+  --base_res 800x600 \
+  --gif ./out/basic_ppo_dinov3/best.gif \
+  --gif_dir ./out/basic_ppo_dinov3/eps \
+  --fps 15 \
+  --gif_scale 1 \
+  --gif_repeat 1 \
+  --deterministic
+
+python -m scripts.eval_ppo_basic_play \
   --checkpoint ./checkpoints_mwh/mwh_ppo_final.pt \
   --scenario my_way_home \
   --action_space no_shoot \
@@ -469,6 +521,24 @@ python -m scripts.eval_ppo_basic_play \
   --base_res 800x600 \
   --gif ./out/mwh_ppo_v2/best.gif \
   --gif_dir ./out/mwh_ppo_v2/eps \
+  --fps 15 \
+  --gif_scale 1 \
+  --gif_repeat 1 \
+  --deterministic
+
+python -m scripts.eval_ppo_basic_play \
+  --checkpoint ./checkpoints_mwh/ppo_dinov3_mwh_v3_iter_160.pt \
+  --scenario my_way_home \
+  --action_space no_shoot \
+  --backbone dinov3 \
+  --freeze_backbone \
+  --episodes 10 \
+  --frame_repeat 4 \
+  --frame_stack 4 \
+  --width 84 --height 84 \
+  --base_res 800x600 \
+  --gif ./out/mwh_ppo_dinov3/best.gif \
+  --gif_dir ./out/mwh_ppo_dinov3/eps \
   --fps 15 \
   --gif_scale 1 \
   --gif_repeat 1 \
