@@ -142,9 +142,13 @@ class DinoV2ActorCritic(nn.Module):
         # Policy & value heads
         self.pi = nn.Sequential(
             nn.ReLU(),
+            nn.Linear(proj_dim, proj_dim),
+            nn.ReLU(),
             nn.Linear(proj_dim, n_actions),
         )
         self.v = nn.Sequential(
+            nn.ReLU(),
+            nn.Linear(proj_dim, proj_dim),
             nn.ReLU(),
             nn.Linear(proj_dim, 1),
         )
@@ -159,11 +163,22 @@ class DinoV2ActorCritic(nn.Module):
         """
         device = next(self.parameters()).device
         x = x.to(device)
-        # Take the last RGB frame: shape (B, 3, H, W)
-        last_rgb = x[:, -3:, :, :]
-        feats = self.encoder(last_rgb)      # (B, feat_dim)
-        h = self.project(feats)      # (B, proj_dim)
 
+        # Take the last RGB frame: shape (B, 3, H, W)
+        #last_rgb = x[:, -3:, :, :]
+        #feats = self.encoder(last_rgb)      # (B, feat_dim)
+        #h = self.project(feats)      # (B, proj_dim)
+
+        B, C, H, W = x.shape
+        T = C // 3
+        frames = x.view(B, T, 3, H, W)  # (B, T, 3, H, W)
+
+        feats_list = []
+        for t in range(T):
+            feats_list.append(self.encoder(frames[:, t]))  # each (B, feat_dim)
+
+        feats = torch.stack(feats_list, dim=1).mean(dim=1)  # (B, feat_dim)
+        h = self.project(feats)      # (B, proj_dim)
         logits = self.pi(h)          # (B, n_actions)
         value = self.v(h).squeeze(-1)  # (B,)
         return logits, value

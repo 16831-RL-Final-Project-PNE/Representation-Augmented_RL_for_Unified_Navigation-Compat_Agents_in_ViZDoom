@@ -84,7 +84,7 @@ class DinoV3Encoder(nn.Module):
         x = (x - self.pixel_mean) / self.pixel_std
 
         # DINO-style models usually take 'pixel_values'=(B,3,H,W)
-        outputs = self.backbone(pixel_values=x)
+        outputs = self.backbone(pixel_values=x) #(B, N_tokens, D)
 
         # Get a single feature vector per image
         if hasattr(outputs, "pooler_output") and outputs.pooler_output is not None:
@@ -131,12 +131,26 @@ class DinoV3ActorCritic(nn.Module):
             freeze_backbone=freeze_backbone,
         )
 
+        # Optionally add a small MLP bottleneck on top of DINOv2 features
+        proj_dim = hidden_dim
+        if hidden_dim is not None:
+            self.project = nn.Sequential(
+                nn.Linear(hidden_dim, hidden_dim),
+                nn.ReLU(),
+            )
+        else:
+            self.project = nn.Identity()
+
         # Small heads on top of frozen features
         self.pi = nn.Sequential(
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, n_actions),
         )
         self.v = nn.Sequential(
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, 1),
         )
@@ -149,12 +163,18 @@ class DinoV3ActorCritic(nn.Module):
         if x.dtype == torch.uint8:
             x = x.float() / 255.0
 
-        # Take the last RGB frame: shape (B, 3, H, W)
-        last_rgb = x[:, -3:, :, :]
+        B, C, H, W = x.shape
+        T = C // 3
+        frames = x.view(B, T, 3, H, W)  # (B, T, 3, H, W)
 
-        feat = self.encoder(last_rgb)  # (B, feat_dim)
-        logits = self.pi(feat)         # (B, n_actions)
-        value = self.v(feat).squeeze(-1)  # (B,)
+        feats_list = []
+        for t in range(T):
+            feats_list.append(self.encoder(frames[:, t]))  # each (B, feat_dim)
+
+        feats = torch.stack(feats_list, dim=1).mean(dim=1)  # (B, feat_dim)
+        h = self.project(feats)
+        logits = self.pi(h) #(B, n_actions)
+        value = self.v(h).squeeze(-1) #(B,)
         return logits, value
 
     @torch.no_grad()

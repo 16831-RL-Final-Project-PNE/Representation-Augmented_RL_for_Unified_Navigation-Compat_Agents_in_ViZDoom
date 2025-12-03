@@ -54,6 +54,7 @@ def run_random(
     fps: int = 8,
     step_frame_repeat_for_gif: int = 1,
     gif_scale: int = 2,
+    max_gif_frames: int = 999,
 ) -> None:
     """
     Run a random policy (via RandomAgent) for a number of episodes.
@@ -125,7 +126,8 @@ def run_random(
                 gif_dir,
                 f"ep_{i + 1:03d}_return_{ep_ret:.2f}.gif",
             )
-            _save_gif(out_file, ep_frames, fps)
+            frames_to_save = ep_frames[:max_gif_frames]
+            _save_gif(out_file, frames_to_save, fps)
 
         if ep_ret > best_return and ep_frames:
             best_return, best_frames = ep_ret, ep_frames
@@ -144,7 +146,8 @@ def run_random(
             out_dir,
             f"{root}_return_{best_return:.2f}{ext}",
         )
-        _save_gif(out_file, best_frames, fps)
+        frames_to_save = best_frames[:max_gif_frames]
+        _save_gif(out_file, frames_to_save, fps)
         print(f"Saved best-episode GIF to: {out_file}")
 
 
@@ -184,10 +187,24 @@ def main() -> None:
         choices=["160x120", "320x240", "800x600"],
         help="native ViZDoom render resolution",
     )
+    parser.add_argument(
+        "--action_space",
+        type=str,
+        default="no_shoot",
+        choices=["usual", "no_shoot"],
+        help="ViZDoom action space to run.",
+    )
+    parser.add_argument(
+        "--max_gif_frames",
+        type=int,
+        default=999,
+        help="maximum number of frames to save per GIF",
+    )
     args = parser.parse_args()
 
     env = DoomEnv(
         scenario=args.scenario,
+        action_space=args.action_space,
         frame_repeat=args.frame_repeat,
         frame_stack=args.frame_stack,
         width=args.width,
@@ -210,6 +227,7 @@ def main() -> None:
         fps=args.fps,
         step_frame_repeat_for_gif=args.gif_repeat,
         gif_scale=args.gif_scale,
+        max_gif_frames=args.max_gif_frames,
     )
     env.close()
 

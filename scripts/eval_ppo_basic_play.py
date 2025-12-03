@@ -9,6 +9,7 @@ import torch
 
 from env.doom_env import DoomEnv, _save_gif
 from agents.ppo_agent import PPOAgent
+from configs.ppo_config import PPOConfig
 
 def _to_hwc_rgb(frame: np.ndarray) -> np.ndarray:
     """
@@ -68,6 +69,7 @@ def play_and_record(
     step_frame_repeat_for_gif: int = 1,
     gif_scale: int = 2,
     deterministic: bool = True,
+    max_gif_frames: int = 999,
 ) -> None:
     """
     Run a trained PPO agent for several episodes and record GIFs.
@@ -133,7 +135,8 @@ def play_and_record(
                 gif_dir,
                 f"ep_{i+1:03d}_return_{ep_ret:.2f}.gif",
             )
-            _save_gif(out_file, ep_frames, fps)
+            frames_to_save = ep_frames[:max_gif_frames]
+            _save_gif(out_file, frames_to_save, fps)
 
         if ep_ret > best_return and ep_frames:
             best_return, best_frames = ep_ret, ep_frames
@@ -152,7 +155,8 @@ def play_and_record(
             out_dir,
             f"{root}_return_{best_return:.2f}{ext}",
         )
-        _save_gif(out_file, best_frames, fps)
+        frames_to_save = best_frames[:max_gif_frames]
+        _save_gif(out_file, frames_to_save, fps)
         print(f"Saved best-episode GIF to: {out_file}")
 
 
@@ -212,6 +216,32 @@ def main():
         action="store_true",
         help="use deterministic (argmax) policy instead of sampling",
     )
+
+    parser.add_argument(
+        "--feat_dim",
+        type=int,
+        default=256,
+        help="feature dimension output from encoder part.",
+    )
+
+    parser.add_argument(
+        "--backbone",
+        type=str,
+        default="cnn",
+        choices=["cnn", "dinov2", "dinov3"],
+    )
+
+    parser.add_argument(
+        "--freeze_backbone",
+        action="store_true",
+        help="Freeze the image encoder.",
+    )
+    parser.add_argument(
+        "--max_gif_frames",
+        type=int,
+        default=999,
+        help="maximum number of frames to save per GIF",
+    )
     args = parser.parse_args()
 
     os.makedirs("./out", exist_ok=True)
@@ -231,6 +261,12 @@ def main():
         base_res=args.base_res,
     )
 
+    config = PPOConfig(
+        backbone=args.backbone,
+        feat_dim=args.feat_dim,
+        freeze_backbone=args.freeze_backbone,
+    )
+
     # Rebuild agent with the same shape and load weights
     obs_shape = env.observation_shape
     n_actions = env.action_space_n
@@ -238,9 +274,12 @@ def main():
     agent = PPOAgent(
         obs_shape=obs_shape,
         n_actions=n_actions,
+        feat_dim=config.feat_dim,
+        backbone=config.backbone,        # "cnn" / "dinov2" / "dinov3"
+        freeze_backbone=config.freeze_backbone,
     ).to(device)
 
-    checkpoint = torch.load(args.checkpoint, map_location=device)
+    checkpoint = torch.load(args.checkpoint, map_location=device, weights_only=False)
     agent.load_state_dict(checkpoint["agent_state_dict"])
     agent.eval()
     print(f"Loaded checkpoint from {args.checkpoint}")
@@ -256,6 +295,7 @@ def main():
         step_frame_repeat_for_gif=args.gif_repeat,
         gif_scale=args.gif_scale,
         deterministic=args.deterministic,
+        max_gif_frames=args.max_gif_frames,
     )
 
     env.close()
