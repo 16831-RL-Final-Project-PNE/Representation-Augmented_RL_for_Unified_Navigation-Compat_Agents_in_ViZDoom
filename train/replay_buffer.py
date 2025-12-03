@@ -135,48 +135,6 @@ class RolloutBuffer:
                 "rewards": self.rewards[batch_idx].to(self.device),
             }
 
-    def _sample_idx(self, L: int):
-        """
-        Same behavior as TransitionBuffer:
-        - sample any contiguous sequence of length L
-        - circular buffer aware
-        - DOES NOT reject done-crossing sequences
-        """
-        if self.full:
-            max_start = self.buffer_size
-        else:
-            max_start = self.size - L
-
-        start = np.random.randint(0, max_start)
-        idxs = np.arange(start, start + L) % self.buffer_size
-        return idxs
-
-    def _retrieve_sequence_batch(self, idxs, batch_size, L):
-        """
-        idxs: (B, L)
-        return EXACTLY like TransitionBuffer:
-           obs:  (L, B, *obs_shape)
-           act:  (L, B)
-           rew:  (L, B)
-           term: (L, B)
-        """
-        vec = idxs.reshape(-1)
-
-        obs  = self.observations[vec].reshape(batch_size, L, *self.obs_shape)
-        b, l, t, c, h, w = obs.shape
-        obs = obs.view(b, l * t, c, h, w).float() / 255.0
-        act  = self.actions[vec].reshape(batch_size, L)
-        rew  = self.rewards[vec].reshape(batch_size, L)
-        term = self.dones[vec].reshape(batch_size, L)
-
-        # RETURN WITH THE SAME (L,B,...) ORDER AS TransitionBuffer
-        obs  = obs.permute(1, 0, 2, 3, 4, 5) if obs.ndim == 6 else obs.permute(1,0,2,3,4)
-        act  = act.permute(1, 0)
-        rew  = rew.permute(1, 0)
-        term = term.permute(1, 0)
-
-        return obs, act, rew, term
-
     def sample_sequences(self, seq_len: int, batch_size: int):
         """
         EXACT TransitionBuffer behavior:
@@ -187,21 +145,40 @@ class RolloutBuffer:
             term: (T, B)
         """
         L = seq_len + 1
+        N = self.size
+        num_seqs = N // L
+        num_full_batches = num_seqs // batch_size
 
-        # exactly like TransitionBuffer
-        idxs = np.asarray([self._sample_idx(L) for _ in range(batch_size)])
+        idxs = np.arange(num_seqs * L).reshape(num_seqs, L)
 
-        obs, act, rew, term = self._retrieve_sequence_batch(idxs, batch_size, L)
+        for i in range(num_full_batches):
+            start = i * batch_size
+            end   = (i + 1) * batch_size
 
-        # SHIFT like TransitionBuffer
-        obs  = obs[1:]     # (T,B,...)
-        act  = act[:-1]    # (T,B,action_size)
-        rew  = rew[:-1]    # (T,B)
-        term = term[:-1]   # (T,B)
+            batch_idxs = idxs[start:end]         # shape (B, L)
+            batch_idxs_torch = torch.as_tensor(batch_idxs)
 
-        return {
-            "observations": obs.to(self.device).float(),  
-            "actions":      act.to(self.device),
-            "rewards":      rew.to(self.device),
-            "dones":        term.to(self.device),
-        }
+            obs  = self.observations[batch_idxs_torch].to(self.device)  # (B, L, C, H, W)
+            act  = self.actions[batch_idxs_torch].to(self.device)       # (B, L)
+            rew  = self.rewards[batch_idxs_torch].to(self.device)       # (B, L)
+            term = self.dones[batch_idxs_torch].to(self.device)         # (B, L)
+
+            b, l, t, c, h, w = obs.shape
+            obs = obs.view(b, l, t * c, h, w).float() / 255.0
+
+            obs  = obs.permute(1,0,2,3,4)   # (L,B,C,H,W)
+            act  = act.permute(1,0)                        # (L,B)
+            rew  = rew.permute(1,0)                        # (L,B)
+            term = term.permute(1,0)                       # (L,B)
+
+            obs  = obs[1:]      # (L,B,C,H,W)
+            act  = act[:-1]     # (L,B)
+            rew  = rew[:-1]     # (L,B)
+            term = term[:-1]    # (L,B)
+
+            yield {
+                "observations": obs,
+                "actions": act,
+                "rewards": rew,
+                "dones": term,
+            }

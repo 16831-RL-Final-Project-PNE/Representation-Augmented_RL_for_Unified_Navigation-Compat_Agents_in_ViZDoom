@@ -66,6 +66,9 @@ class RSSMDiscrete(nn.Module):
         state_action_embed = self.state_action_embedder(torch.cat([prev_rssm_state.stoch*nonterms, prev_action],dim=-1))
         deter_state = self.rnn(state_action_embed, prev_rssm_state.deter*nonterms)
         prior_logit = self.temporal_prior(deter_state)
+        if np.random.random() < 0.002:
+            print("Mean deter_state:", deter_state.mean(), "Std deter_state:", deter_state.std())
+            print("Mean prior_logit:", prior_logit.mean(), "Std prior_logit:", prior_logit.std())
         prior_stoch_state = self.get_stoch_state(prior_logit)
         prior_rssm_state = RSSMDiscState(prior_logit, prior_stoch_state, deter_state)
         return prior_rssm_state

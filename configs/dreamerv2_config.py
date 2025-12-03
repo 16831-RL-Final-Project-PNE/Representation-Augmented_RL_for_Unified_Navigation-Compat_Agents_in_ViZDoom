@@ -5,13 +5,12 @@ from dataclasses import dataclass, field
 class DreamerV2Config:
     total_iterations: int = 200
     steps_per_iteration: int = 8192
-    learning_rate: dict[str, float] = field(default_factory=lambda: {'world_model': 2e-4, 'actor_model': 4e-5, 'value_model': 1e-4})
+    learning_rate: dict[str, float] = field(default_factory=lambda: {'world_model': 8e-5, 'actor_model': 3e-5, 'value_model': 1e-4})
 
     gamma: float = 0.995
     gae_lambda: float = 0.95
     
     epochs: int = 4
-    collect_intervals: int = 1
 
     eval_episodes: int = 10
     eval_interval: int = 1
@@ -28,8 +27,8 @@ class DreamerV2Config:
     save_every: int = 0                  # 0 = only final, >0 = also every N iterations
 
     # DreamerV2 Model Config
-    embedding_size: int = 256
-    batch_size: int = 4
+    embedding_size: int = 512
+    batch_size: int = 32
     grad_clip_norm: float = 10.0
 
     use_dino_v3: bool = False
@@ -39,20 +38,20 @@ class DreamerV2Config:
     use_slow_target: bool = True
     slow_target_fraction: float = 0.05
 
-    rssm_deter_size: int = 360
-    rssm_category_size: int = 32
-    rssm_class_size: int = 32
-    rssm_node_size: int = 200
-    rssm_seq_len: int = 8
-    rssm_horizon: int = 15
+    rssm_deter_size: int = 512
+    rssm_category_size: int = 20
+    rssm_class_size: int = 20
+    rssm_node_size: int = 256
+    rssm_seq_len: int = 50
+    rssm_horizon: int = 10
 
     kl_use_kl_balance: bool = True
     kl_balance_scale: float = 0.8
-    kl_use_free_nats: bool = False
-    kl_free_nats: float = 1.0
+    kl_use_free_nats: bool = True
+    kl_free_nats: float = 3.0
 
     actor_grad: str = 'dynamics' # 'reinforce' or 'dynamics'
-    actor_entropy_scale: float = 5e-2
+    actor_entropy_scale: float = 1e-2
     actor_layers: int = 4
     actor_node_size: int = 256
 

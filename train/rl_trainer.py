@@ -77,6 +77,20 @@ class RLTrainer:
                 lr=self.config.learning_rate,
             )
 
+        print("=== Checking if RSSM params are in world_model optimizer ===")
+        rssm_params = {id(p) for p in self.agent.rssm.parameters()}
+        opt_params = set()
+
+        for group in self.optimizer['world_model'].param_groups:
+            for p in group['params']:
+                opt_params.add(id(p))
+
+        missing = rssm_params - opt_params
+        print("Missing RSSM parameters:", len(missing))
+        for p in missing:
+            print(" - Missing parameter id:", p)
+
+
         self.buffer = RolloutBuffer(
             buffer_size=self.config.steps_per_iteration,
             obs_shape=self.obs_shape,

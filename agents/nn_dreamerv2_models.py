@@ -10,7 +10,7 @@ class DenseModel(nn.Module):
             output_shape,
             input_size,
             layers = 3, 
-            node_size = 200,
+            node_size = 100,
             dist = 'normal',
         ):
         """
@@ -55,7 +55,7 @@ class DenseModel(nn.Module):
         raise NotImplementedError(self._dist)
 
 class ObsEncoder(nn.Module):
-    def __init__(self, input_shape, embedding_size, depth = 24, kernel = 4):
+    def __init__(self, input_shape, embedding_size, depth = 32, kernel = 3):
         """
         :param input_shape: tuple containing shape of input
         :param embedding_size: Supposed length of encoded vector
@@ -95,7 +95,7 @@ class ObsEncoder(nn.Module):
         return embed_size
 
 class ObsDecoder(nn.Module):
-    def __init__(self, output_shape, embed_size, depth = 24, kernel = 4):
+    def __init__(self, output_shape, embed_size, depth = 32, kernel = 3):
         """
         :param output_shape: tuple containing shape of output obs (c, h, w)
         :param embed_size: the size of input vector, for dreamerv2 : modelstate 
