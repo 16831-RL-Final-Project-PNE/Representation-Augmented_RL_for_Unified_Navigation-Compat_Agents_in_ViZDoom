@@ -3,3 +3,4 @@
 logs/*
 checkpoints/
 __vizdoom.ini
+out/
