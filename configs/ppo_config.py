@@ -62,3 +62,9 @@ class PPOConfig:
 
     # Whether to linearly decay rnd_int_coef from its initial value to 0
     rnd_int_decay: bool = False
+
+    # ---------------------------
+    # JEPA-pretrained encoder
+    # ---------------------------
+    jepa_ckpt: str | None = None     # e.g. "/data/.../mwh_cnn_jepa_coswarm_...pt"
+    jepa_partial_unfreeze: int = 0   # 0 = all frozen conv block, only head will be unfrozen；>0 means freezing last k conv block + head

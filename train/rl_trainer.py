@@ -123,6 +123,8 @@ class RLTrainer:
                 feat_dim=self.config.feat_dim,
                 backbone=self.config.backbone,        # "cnn" / "dinov2" / "dinov3"
                 freeze_backbone=self.config.freeze_backbone,
+                jepa_ckpt_path=getattr(self.config, "jepa_ckpt", None),
+                jepa_partial_unfreeze=getattr(self.config, "jepa_partial_unfreeze", 0),
             )
 
         elif agent_type == "random":
