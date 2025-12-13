@@ -32,6 +32,8 @@ class PPOAgent(nn.Module):
         feat_dim: int = 256,
         backbone: str = "cnn",
         freeze_backbone: bool = True,
+        jepa_ckpt_path: str | None = None,
+        jepa_partial_unfreeze: int = 0,
     ):
         """
         obs_shape: (frame_stack, 3, H, W) from DoomEnv.observation_shape
@@ -58,6 +60,62 @@ class PPOAgent(nn.Module):
                 n_actions=n_actions,
                 feat_dim=feat_dim,
             )
+
+            # ---- Load JEPA-pretrained encoder weights (if provided) ----
+            if jepa_ckpt_path is not None:
+                print(f"[PPOAgent] Loading JEPA encoder from: {jepa_ckpt_path}")
+                ckpt = torch.load(jepa_ckpt_path, map_location="cpu", weights_only=True)
+
+                if "encoder_state_dict" in ckpt:
+                    enc_state = ckpt["encoder_state_dict"]
+                elif "jepa_state_dict" in ckpt:
+                    # get encoder from jepa_state_dict
+                    raw_state = ckpt["jepa_state_dict"]
+                    enc_state = {
+                        k.replace("encoder.", ""): v
+                        for k, v in raw_state.items()
+                        if k.startswith("encoder.")
+                    }
+                else:
+                    raise KeyError(
+                        "JEPA checkpoint must contain 'encoder_state_dict' "
+                        "or 'jepa_state_dict'."
+                    )
+
+                missing, unexpected = self.ac.enc.load_state_dict(enc_state, strict=False)
+                if missing:
+                    print(f"[PPOAgent] Warning: missing keys in encoder_state_dict: {missing}")
+                if unexpected:
+                    print(f"[PPOAgent] Warning: unexpected keys in encoder_state_dict: {unexpected}")
+
+            # ---- Freeze / partial fine-tune encoder ----
+            if freeze_backbone and (jepa_ckpt_path is not None):
+                # exp A：all encoder frozen (only learning policy/value head)
+                print("[PPOAgent] Freezing entire ConvEncoder (JEPA features frozen).")
+                for p in self.ac.enc.conv.parameters():
+                    p.requires_grad = False
+
+            elif jepa_partial_unfreeze > 0 and (jepa_ckpt_path is not None):
+                # exp B：first all freezing, and then undreeze last k conv layers + head
+                print(f"[PPOAgent] Partially fine-tuning encoder: last {jepa_partial_unfreeze} conv layers + head.")
+                for p in self.ac.enc.parameters():
+                    p.requires_grad = False
+
+                # Find out conv layers in ConvEncoder
+                conv_modules = []
+                for m in self.ac.enc.conv.modules():
+                    if isinstance(m, nn.Conv2d):
+                        conv_modules.append(m)
+
+                # Unfreezing last k conv layers
+                k = min(jepa_partial_unfreeze, len(conv_modules))
+                for conv in conv_modules[-k:]:
+                    for p in conv.parameters():
+                        p.requires_grad = True
+
+                # Unfreezing head (linear layer)
+                for p in self.ac.enc.head.parameters():
+                    p.requires_grad = True
 
         elif self.backbone == "dinov2":
             # DINOv2-based actor-critic (encoder is usually frozen)

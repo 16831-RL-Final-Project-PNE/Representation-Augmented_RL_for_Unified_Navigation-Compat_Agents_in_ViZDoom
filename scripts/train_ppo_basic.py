@@ -141,6 +141,18 @@ def main():
         action="store_true",
         help="If set, linearly decay rnd_int_coef from its initial value to 0 over training.",
     )
+    parser.add_argument(
+        "--jepa_ckpt",
+        type=str,
+        default=None,
+        help="Optional path to JEPA checkpoint (.pt) whose encoder_state_dict will initialize the CNN backbone.",
+    )
+    parser.add_argument(
+        "--jepa_partial_unfreeze",
+        type=int, 
+        default=0,
+        help="# 0 = all frozen conv block, only head will be unfrozen; >0 means freezing last k conv block + head. For JEPA-pretrained CNN backbone."
+    )
 
     args = parser.parse_args()
 
@@ -207,6 +219,8 @@ def main():
         rnd_batch_size=args.rnd_batch_size,
         rnd_epochs=args.rnd_epochs,
         rnd_int_decay=args.rnd_int_decay,
+        jepa_ckpt=args.jepa_ckpt,
+        jepa_partial_unfreeze =args.jepa_partial_unfreeze
     )
 
     trainer = RLTrainer(
