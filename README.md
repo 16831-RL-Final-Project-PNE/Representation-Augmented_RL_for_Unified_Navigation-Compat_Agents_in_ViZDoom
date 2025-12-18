@@ -1,8 +1,9 @@
 # Representation-Augmented Reinforcement Learning for Unified Navigation–Combat Agents in ViZDoom
 
-> **Author**: Patrick Chen*, Nicholas Leone, Emanuel Mu˜noz Panduro 
+> **Author**: Patrick Chen*, Nicholas Leone, Emanuel Mu˜noz Panduro  
 > **Course**: 16-831 Robot Learning, Carnegie Mellon University  
-> 📄 [View Project Final Report](./final_report/CMU_16831_Final_Project_Report.pdf)
+> 📄 [View Project Final Report](./final_report/CMU_16831_Final_Project_Report.pdf)  
+> 🖥️ [View Slide Presentation](https://docs.google.com/presentation/d/1iJui5_trFfHhKC4F9HJT7-ahU3H7S0OPiEGg95Aftp8/edit?usp=sharing)
 
 ## Contributions
 
@@ -14,7 +15,7 @@ This repository contains the code and experiment artifacts for a ViZDoom reinfor
 
 ![Method overview](final_report/images/method_overview.png)
 
-## Key takeaways
+## Key Takeaways
 
 - Frozen pretrained representations substantially improve **sample efficiency** in navigation-heavy environments (MyWayHome), reducing early “collapse”/local loops versus training a CNN encoder from scratch.
 - RND helps weaker representations (e.g., PPO+CNN in MyWayHome) but can **slow down** strong frozen encoders (DINO / temporal JEPA).
@@ -38,7 +39,17 @@ This repository contains the code and experiment artifacts for a ViZDoom reinfor
 
 ![MyWayHome – TD3 frozen transfer variants](final_report/images/mwh_eval_td3frozen_trans_return.png)
 
-## Qualitative results (GIFs)
+### Summary tables (from the final report)
+
+Table 1 summarizes overall results across all agents. Higher is better for evaluation average return; lower is better for iterations to converge. Reported evaluation returns use **extrinsic reward only** (note the return ranges differ by task).
+
+![Table 1 – Overall results across agents](final_report/images/table1_overall_results.png)
+
+Table 2 compares JEPA_TD3 transfer protocols (frozen vs. partial unfreezing vs. full fine-tuning), all initialized from the same JEPA_TD3 pretrained encoder.
+
+![Table 2 – JEPA_TD3 transfer protocols](final_report/images/table2_jepa_td3_transfer.png)
+
+## Qualitative Results (GIFs)
 
 These rollout GIFs are referenced in the final report.
 
@@ -60,7 +71,7 @@ These rollout GIFs are referenced in the final report.
   - PPO+JEPA_TD3 (unfreeze 2): [Google Drive Link (MWH, JEPA_TD3 unfreeze2)](https://drive.google.com/file/d/1CG1ZIkQ9NvUMSt_GGFe0wi6kdW-3zGNi/view?usp=sharing)
   - PPO+JEPA_TD3 (full fine-tuning): [Google Drive Link (MWH, JEPA_TD3 fullft)](https://drive.google.com/file/d/1tNTdPGt7wzV5UQkNxEa19brfyQIBl0zP/view?usp=sharing)
 
-## Visual backbones used
+## Visual Backbones Used
 
 This project compares three backbone families:
 
@@ -70,11 +81,13 @@ This project compares three backbone families:
 
 ![DINOv2 vs DINOv3](final_report/images/dinnov2_v3.png)
 
-## JEPA pretraining (EMA target + masking)
+## JEPA Pretraining (EMA target + masking)
 
 We pretrain a Conv encoder using a JEPA-style objective: a predictor maps the **context encoder** output to match the **EMA target encoder** output (stop-gradient). Masking is applied to the context input, while targets come from the unmasked input.
 
-![JEPA block diagram](final_report/images/jepa_block_diagram.png)
+<div align="center">
+  <img src="final_report/images/jepa_block_diagram.png" alt="JEPA block diagram" width="75%" />
+</div>
 
 Masking illustration (context vs. targets):
 
@@ -140,7 +153,7 @@ pip install wandb
 If you use Hugging Face-based backbones, set a cache directory (as in provided scripts):
 
 ```bash
-export HF_HOME=/data/patrick/hf_cache
+export HF_HOME=/data/hf_cache
 ```
 
 ## Running experiments
@@ -168,32 +181,86 @@ Single-frame JEPA:
 
 ```bash
 python -m scripts.pretrain_jepa \
-  --frames_paths /path/to/frames_random.npy /path/to/frames_expert.npy \
-  --out_ckpt ./checkpoints/jepa_td0.pt \
+  --frames_paths \
+    /data/16831RL/jepa_rollout_colllect/jepa_frames_basic_random_50k.npy \
+    /data/16831RL/jepa_rollout_colllect/jepa_frames_basic_expert_50k.npy \
+  --out_ckpt /data/16831RL/checkpoints/basic_cnn_jepa_coswarm_e150_wmup0p1_td0_varw2_std1_nmb5_mask_0p6.pt \
   --in_channels 12 \
   --feat_dim 256 \
-  --mask_ratio 0.6 \
-  --temporal_delta 0 \
+  --batch_size 128 \
   --epochs 150 \
   --lr 1e-3 \
-  --min_lr 1e-6 \
-  --warmup_ratio 0.05
+  --min_lr 1e-5 \
+  --warmup_ratio 0.10 \
+  --mask_ratio 0.6 \
+  --temporal_delta 0 \
+  --var_weight 2.0 \
+  --covar_weight 1.0 \
+  --std_target 1.0 \
+  --momentum 0.996 \
+  --device cuda \
+  --num_workers 4 \
+  --use_wandb \
+  --wandb_project vizdoom-jepa \
+  --wandb_run_name basic_cnn_jepa_coswarm_e150_wmup0p1_td0_varw2_std1_nmb5_mask_0p6
 ```
 
-Temporal JEPA (example: TD3):
+Temporal JEPA pretraining in BASIC environment (example: TD3):
 
 ```bash
 python -m scripts.pretrain_jepa \
-  --frames_paths /path/to/frames_random.npy /path/to/frames_expert.npy \
-  --out_ckpt ./checkpoints/jepa_td3.pt \
+  --frames_paths \
+    /data/16831RL/jepa_rollout_colllect/jepa_frames_basic_random_50k.npy \
+    /data/16831RL/jepa_rollout_colllect/jepa_frames_basic_expert_50k.npy \
+  --out_ckpt /data/16831RL/checkpoints/basic_cnn_jepa_coswarm_e150_lr1en3_wmup0p1_nmb5_varw2_covw1_std1_mask0p6_td3.pt \
   --in_channels 12 \
   --feat_dim 256 \
-  --mask_ratio 0.6 \
-  --temporal_delta 3 \
+  --batch_size 128 \
   --epochs 150 \
   --lr 1e-3 \
-  --min_lr 1e-6 \
-  --warmup_ratio 0.05
+  --min_lr 1e-5 \
+  --warmup_ratio 0.1 \
+  --mask_ratio 0.6 \
+  --temporal_delta 3 \
+  --num_blocks 5 \
+  --var_weight 2.0 \
+  --std_target 1.0 \
+  --covar_weight 1.0 \
+  --momentum 0.996 \
+  --device cuda \
+  --num_workers 4 \
+  --use_wandb \
+  --wandb_project vizdoom-jepa \
+  --wandb_run_name basic_cnn_jepa_coswarm_e150_lr1en3_wmup0p1_nmb5_varw2_covw1_std1_mask0p6_td3
+```
+
+Temporal JEPA pretraining in MyWayHome environment (example: TD3):
+
+```bash
+python -m scripts.pretrain_jepa \
+  --frames_paths \
+    /data/16831RL/jepa_rollout_colllect/jepa_frames_mwh_random_100k.npy \
+    /data/16831RL/jepa_rollout_colllect/jepa_frames_mwh_expert_100k.npy \
+  --out_ckpt /data/16831RL/checkpoints/mwh_cnn_jepa_coswarm_e150_lr1en3_wmup0p1_nmb5_varw2_std1_covw1_mask0p6_td3.pt \
+  --in_channels 12 \
+  --feat_dim 256 \
+  --batch_size 128 \
+  --epochs 150 \
+  --lr 1e-3 \
+  --min_lr 1e-5 \
+  --warmup_ratio 0.1 \
+  --mask_ratio 0.6 \
+  --temporal_delta 3 \
+  --num_blocks 5 \
+  --var_weight 2.0 \
+  --std_target 1.0 \
+  --covar_weight 1.0 \
+  --momentum 0.996 \
+  --device cuda \
+  --num_workers 4 \
+  --use_wandb \
+  --wandb_project vizdoom-jepa-mwh \
+  --wandb_run_name mwh_cnn_jepa_coswarm_e150_lr1en3_wmup0p1_nmb5_varw2_std1_covw1_mask0p6_td3
 ```
 
 Notes:
@@ -207,7 +274,60 @@ PPO training is driven by `RLTrainer` + `PPOAgent` with different `backbone` set
 - `dinov2` / `dinov3` (typically frozen),
 - `jepa_*` variants (pretrained weights, frozen or partially unfrozen depending on your config).
 
-Refer to the `scripts/` training entry points in your repo for the exact flags you used. The plots in the report were generated from TensorBoard directories such as:
+PPO training using frozen pretrained JEPA TD3 in BASIC environment for example:
+
+```bash
+python -m scripts.train_ppo_basic \
+  --scenario basic \
+  --action_space usual \
+  --total_iterations 200 \
+  --steps_per_iteration 8192 \
+  --batch_size 128 \
+  --learning_rate 1e-4 \
+  --clip_coef 0.1 \
+  --value_coef 0.25 \
+  --entropy_coef 0.01 \
+  --eval_deterministic \
+  --eval_episodes 10 \
+  --eval_interval 1 \
+  --eval_log_dir /data/16831RL/logs \
+  --eval_log_name basic_ppo_jepa_td3_frozen_eval.npz \
+  --tb_log_dir /data/16831RL/logs/tb_basic_ppo_jepa_td3_frozen \
+  --checkpoint_dir /data/16831RL/checkpoints \
+  --checkpoint_name basic_ppo_jepa_td3_frozen \
+  --save_every 80 \
+  --jepa_ckpt /data/16831RL/checkpoints/basic_cnn_jepa_coswarm_e150_lr1en3_wmup0p1_nmb5_varw2_covw1_std1_mask0p6_td3.pt \
+  --freeze_backbone \
+  --jepa_partial_unfreeze 0
+```
+
+PPO training using frozen pretrained JEPA TD3 in MyWayHome environment for example:
+
+```bash
+python -m scripts.train_ppo_basic \
+  --scenario my_way_home \
+  --action_space no_shoot \
+  --total_iterations 200 \
+  --steps_per_iteration 16384 \
+  --batch_size 256 \
+  --learning_rate 3e-4 \
+  --clip_coef 0.2 \
+  --value_coef 0.5 \
+  --entropy_coef 0.01 \
+  --eval_episodes 10 \
+  --eval_interval 1 \
+  --eval_log_dir /data/16831RL/logs \
+  --eval_log_name mwh_ppo_jepa_td3_frozen.npz \
+  --tb_log_dir /data/16831RL/logs/tb_mwh_ppo_jepa_td3_frozen \
+  --checkpoint_dir /data/16831RL/checkpoints_mwh \
+  --checkpoint_name mwh_ppo_jepa_td3_frozen \
+  --save_every 80 \
+  --jepa_ckpt /data/16831RL/checkpoints/mwh_cnn_jepa_coswarm_e150_lr1en3_wmup0p1_nmb5_varw2_std1_covw1_mask0p6_td3.pt \
+  --freeze_backbone \
+  --jepa_partial_unfreeze 0
+```
+
+Refer to `scripts/train_ppo_basic.py` for the full set of flags. The plots in the report were generated from TensorBoard directories such as:
 
 - `logs/tb_basic_ppo`
 - `logs/tb_basic_ppo_dinov2_run2`
@@ -267,26 +387,77 @@ Random policy:
 ```bash
 python -m scripts.eval_random_play \
   --scenario basic \
+  --action_space usual \
+  --episodes 5 \
+  --frame_repeat 4 \
+  --frame_stack 4 \
+  --width 84 --height 84 \
+  --base_res 800x600 \
+  --gif ./out/basic_random_v8/best.gif \
+  --gif_dir ./out/basic_random_v8/eps \
+  --fps 12 \
+  --gif_scale 1 \
+  --gif_repeat 1 \
+  --seed 47
+```
+
+```bash
+python -m scripts.eval_random_play \
+  --scenario my_way_home \
   --action_space no_shoot \
-  --episodes 10 \
-  --gif ./out/random_best.gif \
-  --gif_dir ./out/random_eps \
-  --gif_scale 2 \
-  --gif_repeat 2
+  --episodes 5 \
+  --max_gif_frames 800 \
+  --frame_repeat 4 \
+  --frame_stack 4 \
+  --width 84 --height 84 \
+  --base_res 800x600 \
+  --gif ./out/mwh_random_v5/best.gif \
+  --gif_dir ./out/mwh_random_v5/eps \
+  --fps 15 \
+  --gif_scale 1 \
+  --gif_repeat 1 \
+  --seed 0
 ```
 
 PPO checkpoint:
 
 ```bash
 python -m scripts.eval_ppo_basic_play \
+  --checkpoint /data/16831RL/checkpoints/basic_ppo_jepa_td3_frozen_final.pt \
   --scenario basic \
-  --action_space no_shoot \
-  --checkpoint ./checkpoints/ppo_basic_final.pt \
+  --action_space usual \
+  --backbone cnn \
+  --freeze_backbone \
   --episodes 5 \
-  --gif ./out/ppo_best.gif \
-  --gif_dir ./out/ppo_eps \
-  --gif_scale 2 \
-  --gif_repeat 2 \
+  --frame_repeat 4 \
+  --frame_stack 4 \
+  --width 84 --height 84 \
+  --base_res 800x600 \
+  --gif ./out/basic_ppo_jepa_td3_frozen/best.gif \
+  --gif_dir ./out/basic_ppo_jepa_td3_frozen/eps \
+  --fps 15 \
+  --gif_scale 1 \
+  --gif_repeat 1 \
+  --deterministic
+```
+
+```bash
+python -m scripts.eval_ppo_basic_play \
+  --checkpoint /data/16831RL/checkpoints_mwh/mwh_ppo_jepa_td3_frozen_final.pt \
+  --scenario my_way_home \
+  --action_space no_shoot \
+  --backbone cnn \
+  --freeze_backbone \
+  --episodes 5 \
+  --frame_repeat 4 \
+  --frame_stack 4 \
+  --width 84 --height 84 \
+  --base_res 800x600 \
+  --gif ./out/mwh_ppo_jepa_td3_frozen/best.gif \
+  --gif_dir ./out/mwh_ppo_jepa_td3_frozen/eps \
+  --fps 15 \
+  --gif_scale 1 \
+  --gif_repeat 1 \
   --deterministic
 ```
 
@@ -308,6 +479,8 @@ The README embeds the report figures under `final_report/images/`. Expected file
 - `final_report/images/basic_eval_td3frozen_trans_return.png`
 - `final_report/images/mwh_eval_avg_return.png`
 - `final_report/images/mwh_eval_td3frozen_trans_return.png`
+- `final_report/images/table1_overall_results.png`
+- `final_report/images/table2_jepa_td3_transfer.png`
 
 ## Acknowledgements
 
