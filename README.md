@@ -171,12 +171,22 @@ The random baseline uses `RLTrainer` but routes actions through `RandomAgent`:
 ```bash
 python -m scripts.train_random_basic \
   --scenario basic \
+  --action_space usual
+```
+
+```bash
+python -m scripts.train_random_basic \
+  --scenario my_way_home \
   --action_space no_shoot \
   --total_iterations 20 \
   --steps_per_iteration 4096 \
-  --eval_episodes 10 \
-  --log_root ./logs \
-  --tb_dirname tb_basic_random
+  --log_root ./logs_mwh \
+  --plot_root ./plots_mwh \
+  --tb_dirname tb_run1 \
+  --eval_log_name mwh_random_run1_eval.npz \
+  --checkpoint_root ./checkpoints_mwh \
+  --checkpoint_name mwh_random_run1 \
+  --save_every 5
 ```
 
 ### 2) JEPA pretraining on collected frames
@@ -185,7 +195,7 @@ Collect rollouts for JEPA pretraining.
 If you do not give the trained checkpoint from any other agents, the actor will just acting randomly through the rollout collection.
 
 ```bash
-CUDA_VISIBLE_DEVICES=3 python -m scripts.collect_jepa_frames \
+python -m scripts.collect_jepa_frames \
   --scenario basic \
   --action_space usual \
   --frame_repeat 4 \
@@ -204,7 +214,7 @@ CUDA_VISIBLE_DEVICES=3 python -m scripts.collect_jepa_frames \
 If you do give the trained checkpoint, then the actor will act just like the trained agent like an expert.
 
 ```bash
-CUDA_VISIBLE_DEVICES=3 python -m scripts.collect_jepa_frames \
+python -m scripts.collect_jepa_frames \
   --scenario basic \
   --action_space usual \
   --frame_repeat 4 \
@@ -223,7 +233,7 @@ CUDA_VISIBLE_DEVICES=3 python -m scripts.collect_jepa_frames \
 The followings are an example in MyWayHome environment.
 
 ```bash
-CUDA_VISIBLE_DEVICES=3 python -m scripts.collect_jepa_frames \
+python -m scripts.collect_jepa_frames \
   --scenario my_way_home \
   --action_space no_shoot \
   --frame_repeat 4 \
@@ -240,7 +250,7 @@ CUDA_VISIBLE_DEVICES=3 python -m scripts.collect_jepa_frames \
 ```
 
 ```bash
-CUDA_VISIBLE_DEVICES=3 python -m scripts.collect_jepa_frames \
+python -m scripts.collect_jepa_frames \
   --scenario my_way_home \
   --action_space no_shoot \
   --frame_repeat 4 \
