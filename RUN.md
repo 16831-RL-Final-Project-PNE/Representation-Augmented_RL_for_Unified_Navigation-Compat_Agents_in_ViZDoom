@@ -43,6 +43,21 @@ python -m scripts.eval_random_play \
   --seed 0
 
 python -m scripts.eval_random_play \
+  --scenario basic \
+  --action_space usual \
+  --episodes 5 \
+  --frame_repeat 4 \
+  --frame_stack 4 \
+  --width 84 --height 84 \
+  --base_res 800x600 \
+  --gif ./out/basic_random_v8/best.gif \
+  --gif_dir ./out/basic_random_v8/eps \
+  --fps 12 \
+  --gif_scale 1 \
+  --gif_repeat 1 \
+  --seed 47
+
+python -m scripts.eval_random_play \
   --scenario my_way_home \
   --action_space no_shoot \
   --episodes 5 \
@@ -68,6 +83,22 @@ python -m scripts.eval_random_play \
   --base_res 800x600 \
   --gif ./out/mwh_random_v4/best.gif \
   --gif_dir ./out/mwh_random_v4/eps \
+  --fps 15 \
+  --gif_scale 1 \
+  --gif_repeat 1 \
+  --seed 0
+
+python -m scripts.eval_random_play \
+  --scenario my_way_home \
+  --action_space no_shoot \
+  --episodes 5 \
+  --max_gif_frames 800 \
+  --frame_repeat 4 \
+  --frame_stack 4 \
+  --width 84 --height 84 \
+  --base_res 800x600 \
+  --gif ./out/mwh_random_v5/best.gif \
+  --gif_dir ./out/mwh_random_v5/eps \
   --fps 15 \
   --gif_scale 1 \
   --gif_repeat 1 \
@@ -277,6 +308,36 @@ CUDA_VISIBLE_DEVICES=0 python -m scripts.train_ppo_basic \
   --checkpoint_name mwh_ppo_dinov3_rnd \
   --save_every 80
 
+CUDA_VISIBLE_DEVICES=2 python -m scripts.train_ppo_basic \
+  --scenario my_way_home \
+  --action_space no_shoot \
+  --backbone dinov3 \
+  --freeze_backbone \
+  --feat_dim 256 \
+  --total_iterations 200 \
+  --steps_per_iteration 16384 \
+  --batch_size 256 \
+  --learning_rate 3e-4 \
+  --clip_coef 0.2 \
+  --value_coef 0.25 \
+  --entropy_coef 0.01 \
+  --use_rnd \
+  --rnd_int_coef 0.01 \
+  --rnd_ext_coef 2.0 \
+  --rnd_gamma 0.99 \
+  --rnd_lr 1e-5 \
+  --rnd_weight_decay 1e-4 \
+  --rnd_batch_size 256 \
+  --rnd_epochs 1 \
+  --rnd_int_decay \
+  --eval_deterministic \
+  --eval_log_dir /data/patrick/16831RL/logs \
+  --eval_log_name mwh_ppo_dinov3_rnd_run2_eval.npz \
+  --tb_log_dir /data/patrick/16831RL/logs/tb_mwh_ppo_dinov3_rnd_run2 \
+  --checkpoint_dir /data/patrick/16831RL/checkpoints \
+  --checkpoint_name mwh_ppo_dinov3_rnd_run2 \
+  --save_every 80
+
 CUDA_VISIBLE_DEVICES=5 python -m scripts.train_ppo_basic \
   --scenario basic \
   --action_space usual \
@@ -476,7 +537,7 @@ python -m scripts.eval_ppo_basic_play \
   --deterministic
 
 python -m scripts.eval_ppo_basic_play \
-  --checkpoint /data/patrick/16831RL/checkpoints/basic_ppo_dinov3_iter_160.pt \
+  --checkpoint /data/patrick/16831RL/checkpoints/basic_ppo_dinov3_run2_final.pt \
   --scenario basic \
   --action_space usual \
   --backbone dinov3 \
@@ -495,6 +556,25 @@ python -m scripts.eval_ppo_basic_play \
   --deterministic
 
 python -m scripts.eval_ppo_basic_play \
+  --checkpoint /data/patrick/16831RL/checkpoints/basic_ppo_dinov3_rnd_run2_final.pt \
+  --scenario basic \
+  --action_space usual \
+  --backbone dinov3 \
+  --freeze_backbone \
+  --feat_dim 256 \
+  --episodes 5 \
+  --frame_repeat 4 \
+  --frame_stack 4 \
+  --width 84 --height 84 \
+  --base_res 800x600 \
+  --gif ./out/basic_ppo_dinov3_rnd/best.gif \
+  --gif_dir ./out/basic_ppo_dinov3_rnd/eps \
+  --fps 15 \
+  --gif_scale 1 \
+  --gif_repeat 1 \
+  --deterministic
+
+python -m scripts.eval_ppo_basic_play \
   --checkpoint /data/patrick/16831RL/checkpoints/basic_ppo_jepa_td3_frozen_final.pt \
   --scenario basic \
   --action_space usual \
@@ -507,6 +587,42 @@ python -m scripts.eval_ppo_basic_play \
   --base_res 800x600 \
   --gif ./out/basic_ppo_jepa_td3_frozen/best.gif \
   --gif_dir ./out/basic_ppo_jepa_td3_frozen/eps \
+  --fps 15 \
+  --gif_scale 1 \
+  --gif_repeat 1 \
+  --deterministic
+
+python -m scripts.eval_ppo_basic_play \
+  --checkpoint /data/patrick/16831RL/checkpoints/basic_ppo_jepa_td3_unfreeze2_final.pt \
+  --scenario basic \
+  --action_space usual \
+  --backbone cnn \
+  --freeze_backbone \
+  --episodes 5 \
+  --frame_repeat 4 \
+  --frame_stack 4 \
+  --width 84 --height 84 \
+  --base_res 800x600 \
+  --gif ./out/basic_ppo_jepa_td3_unfreeze2/best.gif \
+  --gif_dir ./out/basic_ppo_jepa_td3_unfreeze2/eps \
+  --fps 15 \
+  --gif_scale 1 \
+  --gif_repeat 1 \
+  --deterministic
+
+python -m scripts.eval_ppo_basic_play \
+  --checkpoint /data/patrick/16831RL/checkpoints/basic_ppo_jepa_td3_fullft_final.pt \
+  --scenario basic \
+  --action_space usual \
+  --backbone cnn \
+  --freeze_backbone \
+  --episodes 5 \
+  --frame_repeat 4 \
+  --frame_stack 4 \
+  --width 84 --height 84 \
+  --base_res 800x600 \
+  --gif ./out/basic_ppo_jepa_td3_fullft/best.gif \
+  --gif_dir ./out/basic_ppo_jepa_td3_fullft/eps \
   --fps 15 \
   --gif_scale 1 \
   --gif_repeat 1 \
@@ -545,7 +661,7 @@ python -m scripts.eval_ppo_basic_play \
   --deterministic
 
 python -m scripts.eval_ppo_basic_play \
-  --checkpoint ./checkpoints_mwh/ppo_dinov3_mwh_v3_iter_160.pt \
+  --checkpoint /data/patrick/16831RL/checkpoints_mwh/mwh_ppo_dinov3_iter_80.pt \
   --scenario my_way_home \
   --action_space no_shoot \
   --backbone dinov3 \
@@ -568,16 +684,17 @@ python -m scripts.eval_ppo_basic_play \
   --action_space no_shoot \
   --backbone dinov3 \
   --freeze_backbone \
-  --episodes 10 \
+  --episodes 5 \
   --frame_repeat 4 \
   --frame_stack 4 \
   --width 84 --height 84 \
   --base_res 800x600 \
-  --gif ./out/mwh_ppo_dinov3_iter80/best.gif \
-  --gif_dir ./out/mwh_ppo_dinov3_iter80/eps \
+  --gif ./out/mwh_ppo_dinov3_rnd/best.gif \
+  --gif_dir ./out/mwh_ppo_dinov3_rnd/eps \
   --fps 15 \
   --gif_scale 1 \
   --gif_repeat 1 \
+  --seed 100 \
   --deterministic
 
 python -m scripts.eval_ppo_basic_play \
@@ -593,6 +710,60 @@ python -m scripts.eval_ppo_basic_play \
   --base_res 800x600 \
   --gif ./out/mwh_ppo_jepa_td3run3_frozen/best.gif \
   --gif_dir ./out/mwh_ppo_jepa_td3run3_frozen/eps \
+  --fps 15 \
+  --gif_scale 1 \
+  --gif_repeat 1 \
+  --deterministic
+
+python -m scripts.eval_ppo_basic_play \
+  --checkpoint /data/patrick/16831RL/checkpoints_mwh/mwh_ppo_jepa_td3_frozen_final.pt \
+  --scenario my_way_home \
+  --action_space no_shoot \
+  --backbone cnn \
+  --freeze_backbone \
+  --episodes 10 \
+  --frame_repeat 4 \
+  --frame_stack 4 \
+  --width 84 --height 84 \
+  --base_res 800x600 \
+  --gif ./out/mwh_ppo_jepa_td3_frozen/best.gif \
+  --gif_dir ./out/mwh_ppo_jepa_td3_frozen/eps \
+  --fps 15 \
+  --gif_scale 1 \
+  --gif_repeat 1 \
+  --deterministic
+
+python -m scripts.eval_ppo_basic_play \
+  --checkpoint /data/patrick/16831RL/checkpoints_mwh/mwh_ppo_jepa_td3_unfreeze2_final.pt \
+  --scenario my_way_home \
+  --action_space no_shoot \
+  --backbone cnn \
+  --freeze_backbone \
+  --episodes 10 \
+  --frame_repeat 4 \
+  --frame_stack 4 \
+  --width 84 --height 84 \
+  --base_res 800x600 \
+  --gif ./out/mwh_ppo_jepa_td3_unfreeze2/best.gif \
+  --gif_dir ./out/mwh_ppo_jepa_td3_unfreeze2/eps \
+  --fps 15 \
+  --gif_scale 1 \
+  --gif_repeat 1 \
+  --deterministic
+
+python -m scripts.eval_ppo_basic_play \
+  --checkpoint /data/patrick/16831RL/checkpoints_mwh/mwh_ppo_jepa_td3_fullft_final.pt \
+  --scenario my_way_home \
+  --action_space no_shoot \
+  --backbone cnn \
+  --freeze_backbone \
+  --episodes 10 \
+  --frame_repeat 4 \
+  --frame_stack 4 \
+  --width 84 --height 84 \
+  --base_res 800x600 \
+  --gif ./out/mwh_ppo_jepa_td3_fullft/best.gif \
+  --gif_dir ./out/mwh_ppo_jepa_td3_fullft/eps \
   --fps 15 \
   --gif_scale 1 \
   --gif_repeat 1 \
@@ -761,6 +932,57 @@ CUDA_VISIBLE_DEVICES=2 python -m scripts.pretrain_jepa \
   --wandb_project vizdoom-jepa \
   --wandb_run_name basic_cnn_jepa_coswarm_e150_lr1en3_wmup0p1_nmb5_varw2_covw1_std1_mask0p6_td3
 
+CUDA_VISIBLE_DEVICES=2 python -m scripts.pretrain_jepa \
+  --frames_paths \
+    /data/patrick/16831RL/jepa_rollout_colllect/jepa_frames_basic_random_50k.npy \
+    /data/patrick/16831RL/jepa_rollout_colllect/jepa_frames_basic_expert_50k.npy \
+  --out_ckpt /data/patrick/16831RL/checkpoints/basic_cnn_jepa_coswarm_e200_lr1p5en3_wmup0p1_nmb5_varw0p8_covw1_std1_mask0p6_td3_run4.pt \
+  --in_channels 12 \
+  --feat_dim 256 \
+  --batch_size 128 \
+  --epochs 200 \
+  --lr 1.5e-3 \
+  --min_lr 1e-5 \
+  --warmup_ratio 0.1 \
+  --mask_ratio 0.6 \
+  --temporal_delta 3 \
+  --num_blocks 5 \
+  --var_weight 0.8 \
+  --std_target 1.0 \
+  --covar_weight 1.0 \
+  --momentum 0.996 \
+  --device cuda \
+  --num_workers 4 \
+  --use_wandb \
+  --wandb_project vizdoom-jepa \
+  --wandb_run_name basic_cnn_jepa_coswarm_e200_lr1p5en3_wmup0p1_nmb5_varw0p8_covw1_std1_mask0p6_td3_run4
+
+# Cannot learn a useful representation, loss_recon = 1.68, far away from typical useful range of 0.3-0.6
+CUDA_VISIBLE_DEVICES=2 python -m scripts.pretrain_jepa \
+  --frames_paths \
+    /data/patrick/16831RL/jepa_rollout_colllect/jepa_frames_basic_random_50k.npy \
+    /data/patrick/16831RL/jepa_rollout_colllect/jepa_frames_basic_expert_50k.npy \
+  --out_ckpt /data/patrick/16831RL/checkpoints/basic_cnn_jepa_coswarm_e200_lr1p5en3_wmup0p1_nmb5_varw0p5_covw1_std1_mask0p7_td3_run5.pt \
+  --in_channels 12 \
+  --feat_dim 256 \
+  --batch_size 128 \
+  --epochs 200 \
+  --lr 1.5e-3 \
+  --min_lr 1e-5 \
+  --warmup_ratio 0.1 \
+  --mask_ratio 0.7 \
+  --temporal_delta 3 \
+  --num_blocks 5 \
+  --var_weight 0.5 \
+  --std_target 1.0 \
+  --covar_weight 1.0 \
+  --momentum 0.996 \
+  --device cuda \
+  --num_workers 4 \
+  --use_wandb \
+  --wandb_project vizdoom-jepa \
+  --wandb_run_name basic_cnn_jepa_coswarm_e200_lr1p5en3_wmup0p1_nmb5_varw0p5_covw1_std1_mask0p7_td3_run5
+
 CUDA_VISIBLE_DEVICES=4 python -m scripts.pretrain_jepa \
   --frames_paths \
     /data/patrick/16831RL/jepa_rollout_colllect/jepa_frames_mwh_random_100k.npy \
@@ -884,6 +1106,56 @@ CUDA_VISIBLE_DEVICES=4 python -m scripts.pretrain_jepa \
   --use_wandb \
   --wandb_project vizdoom-jepa-mwh \
   --wandb_run_name mwh_cnn_jepa_coswarm_e150_lr1en3_wmup0p1_nmb5_varw1_std1_covw1_mask0p6_td3_run3
+
+CUDA_VISIBLE_DEVICES=0 python -m scripts.pretrain_jepa \
+  --frames_paths \
+    /data/patrick/16831RL/jepa_rollout_colllect/jepa_frames_mwh_random_100k.npy \
+    /data/patrick/16831RL/jepa_rollout_colllect/jepa_frames_mwh_expert_100k.npy \
+  --out_ckpt /data/patrick/16831RL/checkpoints/mwh_cnn_jepa_coswarm_e200_lr1p5en3_wmup0p1_nmb5_varw0p8_std1_covw1_mask0p6_td3_run4.pt \
+  --in_channels 12 \
+  --feat_dim 256 \
+  --batch_size 128 \
+  --epochs 200 \
+  --lr 1.5e-3 \
+  --min_lr 1e-5 \
+  --warmup_ratio 0.1 \
+  --mask_ratio 0.6 \
+  --temporal_delta 3 \
+  --num_blocks 5 \
+  --var_weight 0.8 \
+  --std_target 1.0 \
+  --covar_weight 1.0 \
+  --momentum 0.996 \
+  --device cuda \
+  --num_workers 4 \
+  --use_wandb \
+  --wandb_project vizdoom-jepa-mwh \
+  --wandb_run_name mwh_cnn_jepa_coswarm_e200_lr1p5en3_wmup0p1_nmb5_varw0p8_std1_covw1_mask0p6_td3_run4
+
+CUDA_VISIBLE_DEVICES=0 python -m scripts.pretrain_jepa \
+  --frames_paths \
+    /data/patrick/16831RL/jepa_rollout_colllect/jepa_frames_mwh_random_100k.npy \
+    /data/patrick/16831RL/jepa_rollout_colllect/jepa_frames_mwh_expert_100k.npy \
+  --out_ckpt /data/patrick/16831RL/checkpoints/mwh_cnn_jepa_coswarm_e200_lr1p5en3_wmup0p1_nmb5_varw0p8_std1_covw1_mask0p7_td3_run5.pt \
+  --in_channels 12 \
+  --feat_dim 256 \
+  --batch_size 128 \
+  --epochs 200 \
+  --lr 1.5e-3 \
+  --min_lr 1e-5 \
+  --warmup_ratio 0.1 \
+  --mask_ratio 0.7 \
+  --temporal_delta 3 \
+  --num_blocks 5 \
+  --var_weight 0.8 \
+  --std_target 1.0 \
+  --covar_weight 1.0 \
+  --momentum 0.996 \
+  --device cuda \
+  --num_workers 4 \
+  --use_wandb \
+  --wandb_project vizdoom-jepa-mwh \
+  --wandb_run_name mwh_cnn_jepa_coswarm_e200_lr1p5en3_wmup0p1_nmb5_varw0p8_std1_covw1_mask0p7_td3_run5
 
 
 
@@ -1119,7 +1391,7 @@ CUDA_VISIBLE_DEVICES=4 python -m scripts.train_ppo_basic \
   --jepa_ckpt /data/patrick/16831RL/checkpoints/basic_cnn_jepa_coswarm_e150_lr1en3_wmup0p1_nmb5_varw2_covw1_std1_mask0p6_td3.pt \
   --jepa_partial_unfreeze 2
 
-CUDA_VISIBLE_DEVICES=4 python -m scripts.train_ppo_basic \
+CUDA_VISIBLE_DEVICES=2 python -m scripts.train_ppo_basic \
   --scenario basic \
   --action_space usual \
   --total_iterations 200 \
@@ -1139,6 +1411,98 @@ CUDA_VISIBLE_DEVICES=4 python -m scripts.train_ppo_basic \
   --checkpoint_name basic_ppo_jepa_td3_fullft \
   --save_every 80 \
   --jepa_ckpt /data/patrick/16831RL/checkpoints/basic_cnn_jepa_coswarm_e150_lr1en3_wmup0p1_nmb5_varw2_covw1_std1_mask0p6_td3.pt
+
+CUDA_VISIBLE_DEVICES=2 python -m scripts.train_ppo_basic \
+  --scenario basic \
+  --action_space usual \
+  --total_iterations 200 \
+  --steps_per_iteration 8192 \
+  --batch_size 128 \
+  --learning_rate 1e-4 \
+  --clip_coef 0.1 \
+  --value_coef 0.25 \
+  --entropy_coef 0.01 \
+  --eval_deterministic \
+  --eval_episodes 10 \
+  --eval_interval 1 \
+  --eval_log_dir /data/patrick/16831RL/logs \
+  --eval_log_name basic_ppo_jepa_td3run4_frozen_eval.npz \
+  --tb_log_dir /data/patrick/16831RL/logs/tb_basic_ppo_jepa_td3run4_frozen \
+  --checkpoint_dir /data/patrick/16831RL/checkpoints \
+  --checkpoint_name basic_ppo_jepa_td3run4_frozen \
+  --save_every 80 \
+  --jepa_ckpt /data/patrick/16831RL/checkpoints/basic_cnn_jepa_coswarm_e200_lr1p5en3_wmup0p1_nmb5_varw0p8_covw1_std1_mask0p6_td3_run4.pt \
+  --freeze_backbone \
+  --jepa_partial_unfreeze 0
+
+CUDA_VISIBLE_DEVICES=2 python -m scripts.train_ppo_basic \
+  --scenario basic \
+  --action_space usual \
+  --total_iterations 200 \
+  --steps_per_iteration 8192 \
+  --batch_size 128 \
+  --learning_rate 1e-4 \
+  --clip_coef 0.1 \
+  --value_coef 0.25 \
+  --entropy_coef 0.01 \
+  --eval_deterministic \
+  --eval_episodes 10 \
+  --eval_interval 1 \
+  --eval_log_dir /data/patrick/16831RL/logs \
+  --eval_log_name basic_ppo_jepa_td3run4_unfreeze1_eval.npz \
+  --tb_log_dir /data/patrick/16831RL/logs/tb_basic_ppo_jepa_td3run4_unfreeze1 \
+  --checkpoint_dir /data/patrick/16831RL/checkpoints \
+  --checkpoint_name basic_ppo_jepa_td3run4_unfreeze1 \
+  --save_every 80 \
+  --jepa_ckpt /data/patrick/16831RL/checkpoints/basic_cnn_jepa_coswarm_e200_lr1p5en3_wmup0p1_nmb5_varw0p8_covw1_std1_mask0p6_td3_run4.pt \
+  --freeze_backbone \
+  --jepa_partial_unfreeze 1
+
+CUDA_VISIBLE_DEVICES=2 python -m scripts.train_ppo_basic \
+  --scenario basic \
+  --action_space usual \
+  --total_iterations 200 \
+  --steps_per_iteration 8192 \
+  --batch_size 128 \
+  --learning_rate 1e-4 \
+  --clip_coef 0.1 \
+  --value_coef 0.25 \
+  --entropy_coef 0.01 \
+  --eval_deterministic \
+  --eval_episodes 10 \
+  --eval_interval 1 \
+  --eval_log_dir /data/patrick/16831RL/logs \
+  --eval_log_name basic_ppo_jepa_td3run4_unfreeze2_eval.npz \
+  --tb_log_dir /data/patrick/16831RL/logs/tb_basic_ppo_jepa_td3run4_unfreeze2 \
+  --checkpoint_dir /data/patrick/16831RL/checkpoints \
+  --checkpoint_name basic_ppo_jepa_td3run4_unfreeze2 \
+  --save_every 80 \
+  --jepa_ckpt /data/patrick/16831RL/checkpoints/basic_cnn_jepa_coswarm_e200_lr1p5en3_wmup0p1_nmb5_varw0p8_covw1_std1_mask0p6_td3_run4.pt \
+  --freeze_backbone \
+  --jepa_partial_unfreeze 2
+
+CUDA_VISIBLE_DEVICES=1 python -m scripts.train_ppo_basic \
+  --scenario basic \
+  --action_space usual \
+  --total_iterations 200 \
+  --steps_per_iteration 8192 \
+  --batch_size 128 \
+  --learning_rate 1e-4 \
+  --clip_coef 0.1 \
+  --value_coef 0.25 \
+  --entropy_coef 0.01 \
+  --eval_deterministic \
+  --eval_episodes 10 \
+  --eval_interval 1 \
+  --eval_log_dir /data/patrick/16831RL/logs \
+  --eval_log_name basic_ppo_jepa_td3run4_fullft_eval.npz \
+  --tb_log_dir /data/patrick/16831RL/logs/tb_basic_ppo_jepa_td3run4_fullft \
+  --checkpoint_dir /data/patrick/16831RL/checkpoints \
+  --checkpoint_name basic_ppo_jepa_td3run4_fullft \
+  --save_every 80 \
+  --jepa_ckpt /data/patrick/16831RL/checkpoints/basic_cnn_jepa_coswarm_e200_lr1p5en3_wmup0p1_nmb5_varw0p8_covw1_std1_mask0p6_td3_run4.pt
+
+
 
 # F mask = 0.6, td=0
 CUDA_VISIBLE_DEVICES=1 python -m scripts.train_ppo_basic \
@@ -1405,12 +1769,77 @@ CUDA_VISIBLE_DEVICES=2 python -m scripts.train_ppo_basic \
   --eval_episodes 10 \
   --eval_interval 1 \
   --eval_log_dir /data/patrick/16831RL/logs \
+  --eval_log_name mwh_ppo_jepa_td3run4_frozen.npz \
+  --tb_log_dir /data/patrick/16831RL/logs/tb_mwh_ppo_jepa_td3run4_frozen \
+  --checkpoint_dir /data/patrick/16831RL/checkpoints_mwh \
+  --checkpoint_name mwh_ppo_jepa_td3run4_frozen \
+  --save_every 80 \
+  --jepa_ckpt /data/patrick/16831RL/checkpoints/mwh_cnn_jepa_coswarm_e200_lr1p5en3_wmup0p1_nmb5_varw0p8_std1_covw1_mask0p6_td3_run4.pt \
+  --freeze_backbone \
+  --jepa_partial_unfreeze 0
+
+CUDA_VISIBLE_DEVICES=2 python -m scripts.train_ppo_basic \
+  --scenario my_way_home \
+  --action_space no_shoot \
+  --total_iterations 200 \
+  --steps_per_iteration 16384 \
+  --batch_size 256 \
+  --learning_rate 3e-4 \
+  --clip_coef 0.2 \
+  --value_coef 0.5 \
+  --entropy_coef 0.01 \
+  --eval_episodes 10 \
+  --eval_interval 1 \
+  --eval_log_dir /data/patrick/16831RL/logs \
+  --eval_log_name mwh_ppo_jepa_td3run5_frozen.npz \
+  --tb_log_dir /data/patrick/16831RL/logs/tb_mwh_ppo_jepa_td3run5_frozen \
+  --checkpoint_dir /data/patrick/16831RL/checkpoints_mwh \
+  --checkpoint_name mwh_ppo_jepa_td3run5_frozen \
+  --save_every 80 \
+  --jepa_ckpt /data/patrick/16831RL/checkpoints/mwh_cnn_jepa_coswarm_e200_lr1p5en3_wmup0p1_nmb5_varw0p8_std1_covw1_mask0p7_td3_run5.pt \
+  --freeze_backbone \
+  --jepa_partial_unfreeze 0
+
+CUDA_VISIBLE_DEVICES=2 python -m scripts.train_ppo_basic \
+  --scenario my_way_home \
+  --action_space no_shoot \
+  --total_iterations 200 \
+  --steps_per_iteration 16384 \
+  --batch_size 256 \
+  --learning_rate 3e-4 \
+  --clip_coef 0.2 \
+  --value_coef 0.5 \
+  --entropy_coef 0.01 \
+  --eval_episodes 10 \
+  --eval_interval 1 \
+  --eval_log_dir /data/patrick/16831RL/logs \
   --eval_log_name mwh_ppo_jepa_td3_unfreeze1.npz \
   --tb_log_dir /data/patrick/16831RL/logs/tb_mwh_ppo_jepa_td3_unfreeze1 \
   --checkpoint_dir /data/patrick/16831RL/checkpoints_mwh \
   --checkpoint_name mwh_ppo_jepa_td3_unfreeze1 \
   --save_every 80 \
   --jepa_ckpt /data/patrick/16831RL/checkpoints/mwh_cnn_jepa_coswarm_e150_lr1en3_wmup0p1_nmb5_varw2_std1_covw1_mask0p6_td3.pt \
+  --jepa_partial_unfreeze 1
+
+CUDA_VISIBLE_DEVICES=2 python -m scripts.train_ppo_basic \
+  --scenario my_way_home \
+  --action_space no_shoot \
+  --total_iterations 200 \
+  --steps_per_iteration 16384 \
+  --batch_size 256 \
+  --learning_rate 3e-4 \
+  --clip_coef 0.2 \
+  --value_coef 0.5 \
+  --entropy_coef 0.01 \
+  --eval_episodes 10 \
+  --eval_interval 1 \
+  --eval_log_dir /data/patrick/16831RL/logs \
+  --eval_log_name mwh_ppo_jepa_td3run4_unfreeze1.npz \
+  --tb_log_dir /data/patrick/16831RL/logs/tb_mwh_ppo_jepa_td3run4_unfreeze1 \
+  --checkpoint_dir /data/patrick/16831RL/checkpoints_mwh \
+  --checkpoint_name mwh_ppo_jepa_td3run4_unfreeze1 \
+  --save_every 80 \
+  --jepa_ckpt /data/patrick/16831RL/checkpoints/mwh_cnn_jepa_coswarm_e200_lr1p5en3_wmup0p1_nmb5_varw0p8_std1_covw1_mask0p6_td3_run4.pt \
   --jepa_partial_unfreeze 1
 
 CUDA_VISIBLE_DEVICES=2 python -m scripts.train_ppo_basic \
@@ -1447,9 +1876,54 @@ CUDA_VISIBLE_DEVICES=2 python -m scripts.train_ppo_basic \
   --eval_episodes 10 \
   --eval_interval 1 \
   --eval_log_dir /data/patrick/16831RL/logs \
+  --eval_log_name mwh_ppo_jepa_td3run4_unfreeze2.npz \
+  --tb_log_dir /data/patrick/16831RL/logs/tb_mwh_ppo_jepa_td3run4_unfreeze2 \
+  --checkpoint_dir /data/patrick/16831RL/checkpoints_mwh \
+  --checkpoint_name mwh_ppo_jepa_td3run4_unfreeze2 \
+  --save_every 80 \
+  --jepa_ckpt /data/patrick/16831RL/checkpoints/mwh_cnn_jepa_coswarm_e200_lr1p5en3_wmup0p1_nmb5_varw0p8_std1_covw1_mask0p6_td3_run4.pt \
+  --jepa_partial_unfreeze 2
+
+CUDA_VISIBLE_DEVICES=2 python -m scripts.train_ppo_basic \
+  --scenario my_way_home \
+  --action_space no_shoot \
+  --total_iterations 200 \
+  --steps_per_iteration 16384 \
+  --batch_size 256 \
+  --learning_rate 3e-4 \
+  --clip_coef 0.2 \
+  --value_coef 0.5 \
+  --entropy_coef 0.01 \
+  --eval_episodes 10 \
+  --eval_interval 1 \
+  --eval_log_dir /data/patrick/16831RL/logs \
   --eval_log_name mwh_ppo_jepa_td3_fullft.npz \
   --tb_log_dir /data/patrick/16831RL/logs/tb_mwh_ppo_jepa_td3_fullft \
   --checkpoint_dir /data/patrick/16831RL/checkpoints_mwh \
   --checkpoint_name mwh_ppo_jepa_td3_fullft \
   --save_every 80 \
   --jepa_ckpt /data/patrick/16831RL/checkpoints/mwh_cnn_jepa_coswarm_e150_lr1en3_wmup0p1_nmb5_varw2_std1_covw1_mask0p6_td3.pt
+
+CUDA_VISIBLE_DEVICES=2 python -m scripts.train_ppo_basic \
+  --scenario my_way_home \
+  --action_space no_shoot \
+  --total_iterations 200 \
+  --steps_per_iteration 16384 \
+  --batch_size 256 \
+  --learning_rate 3e-4 \
+  --clip_coef 0.2 \
+  --value_coef 0.5 \
+  --entropy_coef 0.01 \
+  --eval_episodes 10 \
+  --eval_interval 1 \
+  --eval_log_dir /data/patrick/16831RL/logs \
+  --eval_log_name mwh_ppo_jepa_td3run4_fullft.npz \
+  --tb_log_dir /data/patrick/16831RL/logs/tb_mwh_ppo_jepa_td3run4_fullft \
+  --checkpoint_dir /data/patrick/16831RL/checkpoints_mwh \
+  --checkpoint_name mwh_ppo_jepa_td3run4_fullft \
+  --save_every 80 \
+  --jepa_ckpt /data/patrick/16831RL/checkpoints/mwh_cnn_jepa_coswarm_e200_lr1p5en3_wmup0p1_nmb5_varw0p8_std1_covw1_mask0p6_td3_run4.pt
+
+# Plot the learning curves
+./scripts/plot_tb_basic_avg_return.sh 2
+./scripts/plot_tb_mwh_avg_return.sh 2

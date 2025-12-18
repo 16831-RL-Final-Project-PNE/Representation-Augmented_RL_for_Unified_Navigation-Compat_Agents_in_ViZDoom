@@ -124,13 +124,13 @@ def run_random(
             os.makedirs(gif_dir, exist_ok=True)
             out_file = os.path.join(
                 gif_dir,
-                f"ep_{i + 1:03d}_return_{ep_ret:.2f}.gif",
+                f"ep_{i + 1:03d}_return_{ep_ret:.2f}_time_{secs:.1f}.gif",
             )
             frames_to_save = ep_frames[:max_gif_frames]
             _save_gif(out_file, frames_to_save, fps)
 
         if ep_ret > best_return and ep_frames:
-            best_return, best_frames = ep_ret, ep_frames
+            best_return, best_frames, best_time = ep_ret, ep_frames, secs
 
     avg_return = total_return / max(1, episodes)
     print(
@@ -144,7 +144,7 @@ def run_random(
         root, ext = os.path.splitext(os.path.basename(gif_path))
         out_file = os.path.join(
             out_dir,
-            f"{root}_return_{best_return:.2f}{ext}",
+            f"{root}_return_{best_return:.2f}_time_{best_time:.1f}{ext}",
         )
         frames_to_save = best_frames[:max_gif_frames]
         _save_gif(out_file, frames_to_save, fps)
