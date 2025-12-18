@@ -19,7 +19,7 @@ This repository contains the code and experiment artifacts for a ViZDoom reinfor
 
 - Frozen pretrained representations substantially improve **sample efficiency** in navigation-heavy environments (MyWayHome), reducing early “collapse”/local loops versus training a CNN encoder from scratch.
 - RND helps weaker representations (e.g., PPO+CNN in MyWayHome) but can **slow down** strong frozen encoders (DINO / temporal JEPA).
-- Temporal JEPA (larger `temporal_delta`) is consistently strong as a frozen backbone; light fine-tuning can further improve the alignment between visual representation and policy, hence enhance either speed or final return depending on the downstream task.
+- Temporal JEPA (larger `temporal_delta`) is consistently strong as a frozen backbone; light fine-tuning can further improve the alignment between visual representation and policy, thus enhance either speed or final return on the downstream task.
 
 ## Results
 
@@ -86,7 +86,7 @@ This project compares three backbone families:
 We pretrain a Conv encoder using a JEPA-style objective: a predictor maps the **context encoder** output to match the **EMA target encoder** output (stop-gradient). Masking is applied to the context input, while targets come from the unmasked input.
 
 <div align="center">
-  <img src="final_report/images/jepa_block_diagram.png" alt="JEPA block diagram" width="75%" />
+  <img src="final_report/images/jepa_block_diagram.png" alt="JEPA block diagram" width="70%" />
 </div>
 
 Masking illustration (context vs. targets):
@@ -108,16 +108,22 @@ Masking illustration (context vs. targets):
   - `ppo_agent.py`: PPO actor-critic and backbone selection
   - `random_agent.py`: random baseline agent
   - `jepa_model.py`: JEPAConfig / JEPAModel (EMA target, masking, variance/covariance regularizers)
+  - `nn_actor_critic.py`: CNN-based actor–critic backbone (lightweight Conv encoder + policy/value heads) used by PPO when backbone="cnn"
+  - `nn_actor_critic_dinov2.py`: DINOv2-based actor–critic (wraps a frozen or partially trainable DINOv2 feature extractor, then policy/value heads).
+  - `nn_actor_critic_dinov3.py`: DINOv3-based actor–critic (wraps a frozen or partially trainable DINOv3 feature extractor, then policy/value heads).
 - `train/`
   - `rl_trainer.py`: main training loop (collect → update → eval, TensorBoard logging, checkpoints)
+  - `replay_buffer.py`: On-policy rollout buffer for PPO—stores the current iteration’s transitions (obs/actions/rewards/dones/values/log_probs) and computes GAE advantages + returns; it is reset each iteration (not an off-policy replay buffer).
 - `dataset/`
   - `jepa_frames_dataset.py`: `JEPAFramesDataset` / `JEPAFramesTemporalDataset` for `.npy` frame stacks
 - `eval/`
   - `evaluation.py`: evaluation loop + `EvalLogger` + plotting `.npz` curves
   - `plot_tb_avg_return.py`: overlay multiple TensorBoard runs for a scalar (default `Eval_AverageReturn`)
 - `scripts/`
+  - `collect_jepa_frames.py`: collect rollouts for JEPA pretraining usage
   - `pretrain_jepa.py`: JEPA pretraining entry point (supports temporal JEPA via `--temporal_delta`)
-  - `train_random_basic.py`: random baseline training/eval loop (logs TensorBoard + eval `.npz`)
+  - `train_ppo_basic.py`: PPO training/eval loop (logs TensorBoard + eval `.npz`) entry point
+  - `train_random_basic.py`: random baseline training/eval loop (logs TensorBoard + eval `.npz`) entry point
   - `eval_random_play.py`: run a random policy and optionally record GIFs
   - `eval_ppo_basic_play.py`: run a PPO checkpoint and record GIFs
   - `eval_ppo_checkpoint.py`: deterministic evaluation of a PPO checkpoint to `.npz`
@@ -175,7 +181,82 @@ python -m scripts.train_random_basic \
 
 ### 2) JEPA pretraining on collected frames
 
-`pretrain_jepa.py` expects one or more `.npy` files with shape `(N, C, H, W)` where `C = frame_stack * 3` (e.g., 12 for 4-frame stacking).
+Collect rollouts for JEPA pretraining.
+If you do not give the trained checkpoint from any other agents, the actor will just acting randomly through the rollout collection.
+
+```bash
+CUDA_VISIBLE_DEVICES=3 python -m scripts.collect_jepa_frames \
+  --scenario basic \
+  --action_space usual \
+  --frame_repeat 4 \
+  --frame_stack 4 \
+  --width 84 \
+  --height 84 \
+  --base_res 320x240 \
+  --seed 0 \
+  --num_steps 50000 \
+  --trained_ckpt "" \
+  --trained_rollout_prob 0.0 \
+  --max_episode_steps 300 \
+  --out_path /data/16831RL/jepa_rollout_colllect/jepa_frames_basic_random_50k.npy
+```
+
+If you do give the trained checkpoint, then the actor will act just like the trained agent like an expert.
+
+```bash
+CUDA_VISIBLE_DEVICES=3 python -m scripts.collect_jepa_frames \
+  --scenario basic \
+  --action_space usual \
+  --frame_repeat 4 \
+  --frame_stack 4 \
+  --width 84 \
+  --height 84 \
+  --base_res 320x240 \
+  --seed 1 \
+  --num_steps 50000 \
+  --trained_ckpt /data/16831RL/checkpoints/basic_ppo_final.pt \
+  --trained_rollout_prob 1.0 \
+  --max_episode_steps 300 \
+  --out_path /data/16831RL/jepa_rollout_colllect/jepa_frames_basic_expert_50k.npy
+```
+
+The followings are an example in MyWayHome environment.
+
+```bash
+CUDA_VISIBLE_DEVICES=3 python -m scripts.collect_jepa_frames \
+  --scenario my_way_home \
+  --action_space no_shoot \
+  --frame_repeat 4 \
+  --frame_stack 4 \
+  --width 84 \
+  --height 84 \
+  --base_res 320x240 \
+  --seed 0 \
+  --num_steps 100000 \
+  --trained_ckpt "" \
+  --trained_rollout_prob 0.0 \
+  --max_episode_steps 16384 \
+  --out_path /data/16831RL/jepa_rollout_colllect/jepa_frames_mwh_random_100k.npy
+```
+
+```bash
+CUDA_VISIBLE_DEVICES=3 python -m scripts.collect_jepa_frames \
+  --scenario my_way_home \
+  --action_space no_shoot \
+  --frame_repeat 4 \
+  --frame_stack 4 \
+  --width 84 \
+  --height 84 \
+  --base_res 320x240 \
+  --seed 1 \
+  --num_steps 100000 \
+  --trained_ckpt /data/16831RL/checkpoints/mwh_ppo_rnd_final.pt \
+  --trained_rollout_prob 1.0 \
+  --max_episode_steps 16384 \
+  --out_path /data/16831RL/jepa_rollout_colllect/jepa_frames_mwh_expert_100k.npy
+```
+
+`pretrain_jepa.py` expects one or more rollouts `.npy` files with shape `(N, C, H, W)` where `C = frame_stack * 3` (e.g., 12 for 4-frame stacking).
 
 Single-frame JEPA:
 
