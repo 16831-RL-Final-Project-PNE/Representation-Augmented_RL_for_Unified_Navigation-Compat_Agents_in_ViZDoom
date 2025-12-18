@@ -19,7 +19,7 @@ This repository contains the code and experiment artifacts for a ViZDoom reinfor
 
 - Frozen pretrained representations substantially improve **sample efficiency** in navigation-heavy environments (MyWayHome), reducing early “collapse”/local loops versus training a CNN encoder from scratch.
 - RND helps weaker representations (e.g., PPO+CNN in MyWayHome) but can **slow down** strong frozen encoders (DINO / temporal JEPA).
-- Temporal JEPA (larger `temporal_delta`) is consistently strong as a frozen backbone; light fine-tuning can further improve either speed or final return depending on the task.
+- Temporal JEPA (larger `temporal_delta`) is consistently strong as a frozen backbone; light fine-tuning can further improve the alignment between visual representation and policy, hence enhance either speed or final return depending on the downstream task.
 
 ## Results
 
