@@ -18,6 +18,6 @@ python -m eval.plot_tb_avg_return \
     /data/patrick/16831RL/logs/tb_mwh_ppo_dinov3_rnd \
     /data/patrick/16831RL/logs/tb_mwh_ppo_jepa_td1_frozen \
     /data/patrick/16831RL/logs/tb_mwh_ppo_jepa_td2_frozen \
-    /data/patrick/16831RL/logs/tb_mwh_ppo_jepa_td3run3_frozen \
+    /data/patrick/16831RL/logs/tb_mwh_ppo_jepa_td3_frozen \
   --tag Eval_AverageReturn \
   --output ./plots/mwh_eval_avg_return.png
