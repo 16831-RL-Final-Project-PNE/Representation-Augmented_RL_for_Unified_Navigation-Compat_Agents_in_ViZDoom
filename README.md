@@ -55,11 +55,11 @@ These rollout GIFs are referenced in the final report.
 
 - BASIC GIFs:
   - Random: [Google Drive Link (BASIC, Random)](https://drive.google.com/file/d/1TY_qVwCO8CvAnKOVXwrjXMVcuRLROdCb/view?usp=sharing)
-  - PPO+CNN: [Google Drive Link (BASIC, PPO+CNN)](https://drive.google.com/file/d/1TY_qVwCO8CvAnKOVXwrjXMVcuRLROdCb/view?usp=sharing)
-  - PPO+DINOv3 (frozen): [Google Drive Link (BASIC, DINOv3)](https://drive.google.com/file/d/1TY_qVwCO8CvAnKOVXwrjXMVcuRLROdCb/view?usp=sharing)
-  - PPO+DINOv3+RND (frozen): [Google Drive Link (BASIC, DINOv3+RND)](https://drive.google.com/file/d/1TY_qVwCO8CvAnKOVXwrjXMVcuRLROdCb/view?usp=sharing)
-  - PPO+JEPA_TD3 (frozen): [Google Drive Link (BASIC, JEPA_TD3 frozen)](https://drive.google.com/file/d/1TY_qVwCO8CvAnKOVXwrjXMVcuRLROdCb/view?usp=sharing)
-  - PPO+JEPA_TD3 (unfreeze 2): [Google Drive Link (BASIC, JEPA_TD3 unfreeze2)](https://drive.google.com/file/d/1TY_qVwCO8CvAnKOVXwrjXMVcuRLROdCb/view?usp=sharing)
+  - PPO+CNN: [Google Drive Link (BASIC, PPO+CNN)](https://drive.google.com/file/d/16lZjdsa1pxSckNgRogNbXlLFkwsBagCl/view?usp=sharing)
+  - PPO+DINOv3 (frozen): [Google Drive Link (BASIC, DINOv3)](https://drive.google.com/file/d/16-61gcBnK7YCywxWmaqbB0h_-r3HktMj/view?usp=sharing)
+  - PPO+DINOv3+RND (frozen): [Google Drive Link (BASIC, DINOv3+RND)](https://drive.google.com/file/d/1rTiM6IHdG6tZp7r2LFHpE9oGa5TRIEJz/view?usp=sharing)
+  - PPO+JEPA_TD3 (frozen): [Google Drive Link (BASIC, JEPA_TD3 frozen)](https://drive.google.com/file/d/1RQHuLO3wL6L0NrN48xMcByhGMSBufWzC/view?usp=sharing)
+  - PPO+JEPA_TD3 (unfreeze 2): [Google Drive Link (BASIC, JEPA_TD3 unfreeze2)](https://drive.google.com/file/d/1Ebldp-UeMYoqWUY9HjdWUVahBOZoQY8D/view?usp=sharing)
   - PPO+JEPA_TD3 (full fine-tuning): [Google Drive Link (BASIC, JEPA_TD3 fullft)](https://drive.google.com/file/d/1blmY2r58SXCM5d2PNqWdWhDZhxgv6H3T/view?usp=sharing)
 
 - MyWayHome GIFs:
