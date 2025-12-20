@@ -1925,7 +1925,10 @@ CUDA_VISIBLE_DEVICES=2 python -m scripts.train_ppo_basic \
   --jepa_ckpt /data/patrick/16831RL/checkpoints/mwh_cnn_jepa_coswarm_e200_lr1p5en3_wmup0p1_nmb5_varw0p8_std1_covw1_mask0p6_td3_run4.pt
 
 # Plot the learning curves
-./scripts/plot_tb_basic_avg_return.sh 2
-./scripts/plot_tb_mwh_avg_return.sh 2
-./scripts/plot_tb_basic_td3frozen_trans_return.sh 2
-./scripts/plot_tb_mwh_td3frozen_trans_return.sh 2
+./scripts/plot_tb_basic_avg_return.sh 2 
+
+./scripts/plot_tb_mwh_avg_return.sh 2 
+
+./scripts/plot_tb_basic_td3frozen_trans_return.sh 2 
+
+./scripts/plot_tb_mwh_td3frozen_trans_return.sh 2 
