@@ -1927,3 +1927,5 @@ CUDA_VISIBLE_DEVICES=2 python -m scripts.train_ppo_basic \
 # Plot the learning curves
 ./scripts/plot_tb_basic_avg_return.sh 2
 ./scripts/plot_tb_mwh_avg_return.sh 2
+./scripts/plot_tb_basic_td3frozen_trans_return.sh 2
+./scripts/plot_tb_mwh_td3frozen_trans_return.sh 2
