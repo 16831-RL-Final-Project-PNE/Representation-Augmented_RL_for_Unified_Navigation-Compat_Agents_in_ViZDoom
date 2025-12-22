@@ -66,7 +66,7 @@ These rollout GIFs are referenced in the final report.
   - Random: [Google Drive Link (MWH, Random)](https://drive.google.com/file/d/1WUCnLW8Xpnm5ypLLxLHv5xpYONXSqie6/view?usp=sharing)
   - PPO+CNN: [Google Drive Link (MWH, PPO+CNN)](https://drive.google.com/file/d/17-dtuzc1CHX0GUnoLA5j68Bcbq0BbN54/view?usp=sharing)
   - PPO+DINOv3 (frozen): [Google Drive Link (MWH, DINOv3)](https://drive.google.com/file/d/1w4Ge71smrFUC-aHTwmUvy0Xh8LR3Ryn6/view?usp=sharing)
-  - PPO+DINOv3+RND (frozen): [Google Drive Link (MWH, DINOv3+RND)](https://drive.google.com/file/d/14hTZistmTK0Q9zvJfCGTBgi72-AFeUlU/view?usp=sharing)
+  - PPO+DINOv3+RND (frozen): [Google Drive Link (MWH, DINOv3+RND)](https://drive.google.com/file/d/1OhnpeMdeHSE-eFa1ZRFg217NLdpkpsts/view?usp=sharing)
   - PPO+JEPA_TD3 (frozen): [Google Drive Link (MWH, JEPA_TD3 frozen)](https://drive.google.com/file/d/1_iokleHknbz-LCYM02SglGN7VuUnlb4_/view?usp=sharing)
   - PPO+JEPA_TD3 (unfreeze 2): [Google Drive Link (MWH, JEPA_TD3 unfreeze2)](https://drive.google.com/file/d/1CG1ZIkQ9NvUMSt_GGFe0wi6kdW-3zGNi/view?usp=sharing)
   - PPO+JEPA_TD3 (full fine-tuning): [Google Drive Link (MWH, JEPA_TD3 fullft)](https://drive.google.com/file/d/1tNTdPGt7wzV5UQkNxEa19brfyQIBl0zP/view?usp=sharing)
