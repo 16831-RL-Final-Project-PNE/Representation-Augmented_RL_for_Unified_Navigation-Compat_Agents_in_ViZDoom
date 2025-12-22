@@ -15,4 +15,4 @@ python -m eval.plot_tb_avg_return \
     /data/patrick/16831RL/logs/tb_mwh_ppo_jepa_td3_unfreeze2 \
     /data/patrick/16831RL/logs/tb_mwh_ppo_jepa_td3_fullft \
   --tag Eval_AverageReturn \
-  --output ./plots/mwh_eval_td3frozen_trans_return.png
+  --output ./plots_mwh/mwh_eval_td3frozen_trans_return.png

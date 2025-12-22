@@ -278,7 +278,7 @@ CUDA_VISIBLE_DEVICES=2 python -m scripts.train_ppo_basic \
   --freeze_backbone
 
 # attempting
-CUDA_VISIBLE_DEVICES=0 python -m scripts.train_ppo_basic \
+CUDA_VISIBLE_DEVICES=2 python -m scripts.train_ppo_basic \
   --scenario my_way_home \
   --action_space no_shoot \
   --backbone dinov3 \
@@ -306,36 +306,6 @@ CUDA_VISIBLE_DEVICES=0 python -m scripts.train_ppo_basic \
   --tb_log_dir /data/patrick/16831RL/logs/tb_mwh_ppo_dinov3_rnd \
   --checkpoint_dir /data/patrick/16831RL/checkpoints \
   --checkpoint_name mwh_ppo_dinov3_rnd \
-  --save_every 80
-
-CUDA_VISIBLE_DEVICES=2 python -m scripts.train_ppo_basic \
-  --scenario my_way_home \
-  --action_space no_shoot \
-  --backbone dinov3 \
-  --freeze_backbone \
-  --feat_dim 256 \
-  --total_iterations 200 \
-  --steps_per_iteration 16384 \
-  --batch_size 256 \
-  --learning_rate 3e-4 \
-  --clip_coef 0.2 \
-  --value_coef 0.25 \
-  --entropy_coef 0.01 \
-  --use_rnd \
-  --rnd_int_coef 0.01 \
-  --rnd_ext_coef 2.0 \
-  --rnd_gamma 0.99 \
-  --rnd_lr 1e-5 \
-  --rnd_weight_decay 1e-4 \
-  --rnd_batch_size 256 \
-  --rnd_epochs 1 \
-  --rnd_int_decay \
-  --eval_deterministic \
-  --eval_log_dir /data/patrick/16831RL/logs \
-  --eval_log_name mwh_ppo_dinov3_rnd_run2_eval.npz \
-  --tb_log_dir /data/patrick/16831RL/logs/tb_mwh_ppo_dinov3_rnd_run2 \
-  --checkpoint_dir /data/patrick/16831RL/checkpoints \
-  --checkpoint_name mwh_ppo_dinov3_rnd_run2 \
   --save_every 80
 
 CUDA_VISIBLE_DEVICES=5 python -m scripts.train_ppo_basic \
@@ -679,7 +649,7 @@ python -m scripts.eval_ppo_basic_play \
   --deterministic
 
 python -m scripts.eval_ppo_basic_play \
-  --checkpoint /data/patrick/16831RL/checkpoints_mwh/mwh_ppo_dinov3_iter_80.pt \
+  --checkpoint /data/patrick/16831RL/checkpoints/mwh_ppo_dinov3_rnd_final.pt \
   --scenario my_way_home \
   --action_space no_shoot \
   --backbone dinov3 \
